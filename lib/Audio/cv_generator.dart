@@ -505,7 +505,7 @@ class _CVGeneratorState extends State<CVGenerator> {
 
         // Cargar la información extraída por la IA para editar
         _editableInfo = analyzedTranscription;
-        _asegurarTiposDeDatos(); // Llamar al nuevo métdo para asegurar tipos
+        _asegurarTiposDeDatos(); // Llamar al nuevo método para asegurar tipos
 
         // Proceso completado
         setState(() {
@@ -545,7 +545,7 @@ class _CVGeneratorState extends State<CVGenerator> {
     }
   }
 
-  // Métdo para transcribir audio usando AssemblyAI
+  // Método para transcribir audio usando AssemblyAI
   Future<String> _transcribirAudio(String audioUrl) async {
     print("Iniciando transcripción para URL: $audioUrl");
     String transcripcion = "";
@@ -737,7 +737,7 @@ IMPORTANTE: Tu respuesta debe ser ÚNICAMENTE un JSON válido que contenga EXACT
             rawJson = json.decode(cleanedContent);
           }
 
-          // Convertir tdo a tipos Dart seguros (especialmente importante para Flutter web)
+          // Convertir todo a tipos Dart seguros (especialmente importante para Flutter web)
           Map<String, dynamic> parsedJson = convertToSafeDartType(rawJson);
 
           // Asegurar que todos los campos requeridos existen
@@ -809,7 +809,7 @@ IMPORTANTE: Tu respuesta debe ser ÚNICAMENTE un JSON válido que contenga EXACT
     }
   }
 
-  // Métdo para validar información con la IA
+  // Método para validar información con la IA
   Future<bool> _validateInfoWithAI() async {
     try {
       final openRouterApiKey = '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';
@@ -1015,7 +1015,8 @@ O si hay errores:
       return false;
     }
   }
-  // Métdo para mostrar errores de validación de forma legible
+
+  // Método para mostrar errores de validación de forma legible
   void _mostrarErroresValidacion(List<dynamic> errores) {
     if (errores.isEmpty) return;
 

@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -8,10 +9,10 @@ import 'package:scanner_personal/Formulario/main.dart';
 import 'package:scanner_personal/Login/data_base/database_helper.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:scanner_personal/Configuracion/mainConfig.dart';
-import 'package:scanner_personal/WidgetBarra.dart';
+
 import '../Audio/screens/AudioRecorderScreen.dart';
 import '../Audio/screens/cv_generator.dart';
-import '../Formulario/cv_form.dart';
+
 final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
 
@@ -20,56 +21,106 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       key: scaffoldKey,
-      //Donde dice Menu en el sidebar ->
       drawer: Drawer(
-        backgroundColor: Color(0xfff5f5fa),
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            SizedBox(
-              height: 70,
-              child: DrawerHeader(
-                decoration: BoxDecoration(color: Color(0xFFeff8ff)),
-                margin: EdgeInsets.zero,
-                padding: EdgeInsets.zero,
-                child: Align(
-                  alignment: Alignment.bottomLeft,
-                  child: Padding(
-                    padding: EdgeInsets.only(left: 16, bottom: 12),
-                    child: Text(
-                      'Menú',
-                      style: GoogleFonts.poppins(
-                        color: Color(0xFF090467),
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            DrawerHeader(
+              decoration: BoxDecoration(color: Colors.deepPurple),
+              child: Text('Menú', style: GoogleFonts.poppins(color: Colors.white, fontSize: 24)),
+            ),
+            ListTile(
+              leading: Icon(Icons.person),
+              title: Text('Perfil', style: GoogleFonts.poppins()),
+              onTap: () {
+                Navigator.pushNamed(context, '/perfil');
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.edit),
+              title: Text('Modificar datos personales', style: GoogleFonts.poppins()),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => HomeScreenSettings()), // ✅ Lleva a settings
+                );
+              },
             ),
 
+            ListTile(
+              leading: Icon(Icons.lock),
+              title: Text('Cambiar contraseña', style: GoogleFonts.poppins()),
+              onTap: () {
+                Navigator.pushNamed(context, '/change-password');
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.logout),
+              title: Text('Cerrar sesión', style: GoogleFonts.poppins()),
+              onTap: () async {
+                await DatabaseHelper.instance.cerrarSesion();
 
-            HoverableListTile(icon: Icons.person, text: "Cuenta", onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => AccountScreen()),
-              );
-            },),
-            HoverableListTile(icon: Icons.notifications, text: "Notificaciones",onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => NotificationsScreen()),
-              );
-            },),
-            HoverableListTile(icon: Icons.help, text: "Ayuda", onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => AcercaDeScreen()),
-              );
-            },),
-            // Pendiente mirar los colores de este coso para cerrar sesion !
+                if (!context.mounted) return;
 
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/login',
+                      (route) => false,
+                );
+              },
+            ),
+            Divider(), // Separador visual
+
+            // 📚 Opciones adicionales de configuración:
+            ListTile(
+              leading: Icon(Icons.privacy_tip, color: Colors.green),
+              title: Text("Privacidad"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => PrivacyScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.notifications, color: Colors.green),
+              title: Text("Notificaciones"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => NotificationsScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.language, color: Colors.green),
+              title: Text("Idioma"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => LanguageScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.info, color: Colors.green),
+              title: Text("Acerca de"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => AcercaDeScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.info, color: Colors.green),
+              title: Text("Cuenta"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => AccountScreen()),
+                );
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.exit_to_app, color: Colors.red),
               title: const Text("Cerrar sesión", style: TextStyle(color: Colors.red)),
@@ -80,8 +131,8 @@ class HomeScreen extends StatelessWidget {
                   showDialog(
                     context: parentContext,
                     builder: (dialogContext) => AlertDialog(
-                      title: const Text('¿Cerrar sesión?',selectionColor: Color(0xFF090467),),
-                      content: const Text('¿Estás seguro que deseas salir de la aplicación?'),titleTextStyle: GoogleFonts.poppins() ,
+                      title: const Text('¿Cerrar sesión?'),
+                      content: const Text('¿Estás seguro que deseas salir de la aplicación?'),
                       actions: [
                         TextButton(
                           onPressed: () {
@@ -91,7 +142,7 @@ class HomeScreen extends StatelessWidget {
                           child: const Text('Cancelar'),
                         ),
                         TextButton(
-                          onPressed: () async{
+                          onPressed: () {
                             Navigator.pop(dialogContext);
 
                             // Mostrar SnackBar
@@ -101,16 +152,11 @@ class HomeScreen extends StatelessWidget {
                                 duration: Duration(seconds: 2),
                               ),
                             );
-                            await DatabaseHelper.instance.cerrarSesion();
 
-                            await Future.delayed(const Duration(seconds: 2));
-
-                            if (!parentContext.mounted) return;
-
-                            Navigator.of(parentContext).pushNamedAndRemoveUntil(
-                              '/login',
-                                  (route) => false,
-                            );
+                            // Cerrar app después del SnackBar
+                            Future.delayed(const Duration(seconds: 2), () {
+                              exit(0);
+                            });
                           },
                           child: const Text('Sí, salir'),
                         ),
@@ -122,14 +168,21 @@ class HomeScreen extends StatelessWidget {
             ),
           ],
         ),
+        ),
+      appBar: AppBar(
+        title: Text('Bienvenido', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        elevation: 2,
+        iconTheme: IconThemeData(color: Colors.black),
       ),
-      appBar: const CustomAppBar(title: ''), // appBar
-
-      // Este es el body, donde están las funcionalidades
       body: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Color(0xffffffff),
+          gradient: LinearGradient(
+            colors: [Colors.deepPurple, Colors.indigo.shade900],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
         ),
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -139,7 +192,7 @@ class HomeScreen extends StatelessWidget {
               Text(
                 'Selecciona una opción',
                 style: GoogleFonts.poppins(
-                  color: Colors.black,
+                  color: Colors.white,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
@@ -167,7 +220,6 @@ class HomeScreen extends StatelessWidget {
                         crossAxisSpacing: 20,
                         mainAxisSpacing: 20,
                         childAspectRatio: 1,
-                        // Llamo a la clase para generar las diferentes cards de funciones
                         children: [
                           CustomCard(
                             text: 'Escanear Documento',
@@ -200,19 +252,53 @@ class HomeScreen extends StatelessWidget {
                               );
                             },
                           ),
+
                           CustomCard(
-                            text: 'Llenar Formulario',
-                            icon: Icons.newspaper_rounded,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const CVFormEditor(),
-                                ),
+                            text: 'Subir Documento',
+                            icon: Icons.upload,
+                            onTap: () async {
+                              FilePickerResult? result = await FilePicker.platform.pickFiles(
+                                type: FileType.custom,
+                                allowedExtensions: ['pdf'],
                               );
+
+                              if (result != null) {
+                                final archivo = result.files.first;
+                                Uint8List? archivoBytes = archivo.bytes;
+
+                                if (archivoBytes == null && archivo.path != null) {
+                                  archivoBytes = await File(archivo.path!).readAsBytes();
+                                }
+
+                                if (archivoBytes != null) {
+                                  final supabase = Supabase.instance.client;
+                                  final nombreArchivo = archivo.name;
+
+                                  await supabase.storage.from('cv').uploadBinary('archivos/$nombreArchivo', archivoBytes);
+
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('PDF subido exitosamente')),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('No se pudo leer el archivo')),
+                                  );
+                                }
+                              }
                             },
                           ),
 
+                          CustomCard(
+                            text: 'Llenar Formulario',
+                            icon: Icons.edit,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => PantallaSubirCV(initialAction: 'formulario')),
+                              );
+                            },
+                          ),
                         ],
                       ),
                     );
@@ -227,7 +313,6 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// Clase para confirmar Logout
 class LogoutScreen extends StatelessWidget {
   const LogoutScreen({super.key});
 
@@ -268,7 +353,6 @@ class LogoutScreen extends StatelessWidget {
   }
 }
 
-// Clases para las opciones de menu principal
 class CustomCard extends StatefulWidget {
   final String text;
   final IconData icon;
@@ -283,6 +367,8 @@ class CustomCard extends StatefulWidget {
   @override
   _CustomCardState createState() => _CustomCardState();
 }
+
+
 class _CustomCardState extends State<CustomCard> with SingleTickerProviderStateMixin {
   bool _isHovering = false;
   late AnimationController _controller;
@@ -324,44 +410,39 @@ class _CustomCardState extends State<CustomCard> with SingleTickerProviderStateM
       onExit: (_) => _onHover(false),
       child: ScaleTransition(
         scale: _scaleAnimation,
-        child: SizedBox(
-          width: 50, // 👈 Ancho fijo
-          height: 50, // 👈 Alto fijo
-          child: AnimatedContainer(
-            duration: Duration(milliseconds: 300),
-            decoration: BoxDecoration(
-              color: _isHovering ? Color(0xff9ee4b8) : Color(0xfff5f5fa),
-              borderRadius: BorderRadius.circular(12), // 👈 Bordes redondeado
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0xFF787a80).withOpacity(0.2),
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: widget.onTap,
-              child: Padding(
-                padding: const EdgeInsets.all(12), // 👈 Padding reducido
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(widget.icon, size: 46, color: _isHovering ? Color(0xFF090467) : Color(0xFF787a80),), // 👈 Icono más pequeño
-                    SizedBox(height: 6),
-
-                    Text(
-                      widget.text,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 18, // 👈 Texto más pequeño
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF090467),
-                      ),
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 300),
+          decoration: BoxDecoration(
+            color: _isHovering ? Colors.greenAccent : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 6,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: widget.onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(widget.icon, size: 50, color: Colors.deepPurple),
+                  SizedBox(height: 10),
+                  Text(
+                    widget.text,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -369,63 +450,5 @@ class _CustomCardState extends State<CustomCard> with SingleTickerProviderStateM
       ),
     );
   }
-
 }
 
-// Clases para las opciones laterales del menu
-class HoverableListTile extends StatefulWidget {
-  final IconData icon;
-  final String text;
-  final VoidCallback onTap;
-  final Color iconColor;
-  final Color textColor;
-  final Color backgroundColor;
-  final Color borderColor;
-
-  const HoverableListTile({
-    Key ? key,
-    required this.icon,
-    required this.text,
-    required this.onTap,
-    this.iconColor = const Color(0xFF787a80),
-    this.textColor = const Color(0xFF090467),
-    this.backgroundColor = const Color(0xfff5f5fa),
-    this.borderColor = const Color(0xFF090467),
-  }) : super(key: key);
-
-  @override
-  _HoverableListTileState createState() => _HoverableListTileState();
-}
-class _HoverableListTileState extends State<HoverableListTile> {
-  bool _isHovering = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovering = true),
-      onExit: (_) => setState(() => _isHovering = false),
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 200),
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: _isHovering ? Color(0xff9ee4b8) : Color(0xfff5f5fa),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: _isHovering
-              ? [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))]
-              : [],
-        ),
-        child: ListTile(
-          leading: Icon(widget.icon, color: _isHovering ? Color(0xFF090467) : Color(0xFF787a80),),
-          title: Text(
-            widget.text,
-            style: GoogleFonts.poppins(
-              color: widget.textColor,
-              fontWeight: FontWeight.bold, // 👈 Esto hace el texto en negrita
-            ),
-          ),
-          onTap: widget.onTap,
-        ),
-      ),
-    );
-  }
-}

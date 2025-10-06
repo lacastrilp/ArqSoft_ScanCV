@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../domain/models/cv_section_model.dart';
 
 class CVSectionCard extends StatefulWidget {
@@ -42,20 +41,19 @@ class _CVSectionCardState extends State<CVSectionCard> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(40),
+      padding: const EdgeInsets.all(16.0),
       child: Card(
-
         elevation: 4,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           children: [
             // Cabecera de la tarjeta
             Container(
-              padding: EdgeInsets.all(10),
+              padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Color(0xfff5f5fa),
+                color: Color(0xFF00FF7F).withOpacity(0.1),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -66,19 +64,18 @@ class _CVSectionCardState extends State<CVSectionCard> {
                 children: [
                   Text(
                     widget.section.title,
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF090467),
+                      color: Colors.black87,
                     ),
                   ),
                   SizedBox(height: 8),
                   Text(
                     widget.section.description,
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF090467),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
                     ),
                   ),
                 ],
@@ -96,7 +93,7 @@ class _CVSectionCardState extends State<CVSectionCard> {
                     Container(
                       padding: EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Color(0xfff5f5fa),
+                        color: Colors.grey[100],
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Column(
@@ -104,10 +101,9 @@ class _CVSectionCardState extends State<CVSectionCard> {
                         children: [
                           Text(
                             'Campos para incluir:',
-                            style: GoogleFonts.poppins(
-                              color: Color(0xFF090467),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
                               fontSize: 14,
-                              fontWeight: FontWeight.w700,
                             ),
                           ),
                           SizedBox(height: 8),
@@ -115,12 +111,8 @@ class _CVSectionCardState extends State<CVSectionCard> {
                             spacing: 8,
                             runSpacing: 8,
                             children: widget.section.fields.map((field) => Chip(
-                              label: Text(field,style: GoogleFonts.poppins(
-                                color: Color(0xFF090467),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w400,
-                              ),),
-                              backgroundColor: Color(0xff9ee4b8).withOpacity(0.2),
+                              label: Text(field),
+                              backgroundColor: Color(0xFF00FF7F).withOpacity(0.2),
                               labelStyle: TextStyle(fontSize: 12),
                             )).toList(),
                           ),
@@ -142,12 +134,12 @@ class _CVSectionCardState extends State<CVSectionCard> {
                               width: 80,
                               height: 80,
                               decoration: BoxDecoration(
-                                color: widget.isRecording ? Colors.red : Color(0xff9ee4b8),
+                                color: widget.isRecording ? Colors.red : Color(0xFF00FF7F),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
                                 widget.isRecording ? Icons.stop : Icons.mic,
-                                color: Color(0xFF090467),
+                                color: Colors.white,
                                 size: 40,
                               ),
                             ),
@@ -157,7 +149,7 @@ class _CVSectionCardState extends State<CVSectionCard> {
                             widget.isRecording
                                 ? 'Presiona para detener la grabación'
                                 : 'Presiona para iniciar la grabación',
-                            style: GoogleFonts.poppins(fontSize: 14, color : Color(0xFF090467)),
+                            style: TextStyle(fontSize: 14),
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -172,14 +164,14 @@ class _CVSectionCardState extends State<CVSectionCard> {
                         child: ElevatedButton.icon(
                           icon: Icon(
                             widget.isPlaying ? Icons.stop : Icons.play_arrow,
-                            color: Color(0xFF090467),
+                            color: Colors.white,
                           ),
                           label: Text(
                             widget.isPlaying ? 'Detener' : 'Reproducir grabación',
-                            style: GoogleFonts.poppins(color: Color(0xFF090467)),
+                            style: TextStyle(color: Colors.white),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xff9ee4b8),
+                            backgroundColor: Color(0xFF00FF7F),
                             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
@@ -213,7 +205,7 @@ class _CVSectionCardState extends State<CVSectionCard> {
                       icon: Icon(Icons.arrow_back),
                       label: Text('Anterior'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xffd2e8fc),
+                        backgroundColor: Colors.grey[300],
                         foregroundColor: Colors.black87,
                       ),
                       onPressed: widget.onPrevious,
@@ -223,10 +215,10 @@ class _CVSectionCardState extends State<CVSectionCard> {
 
                   // Botón Siguiente o Finalizar
                   ElevatedButton.icon(
-                    icon: Icon(widget.isLastSection ? Icons.check : Icons.arrow_forward,color: Color(0xFF090467),size: 14,),
-                    label: Text(widget.isLastSection ? 'Finalizar' : 'Siguiente', style: GoogleFonts.poppins(color : Color(0xFF090467),fontSize: 14),),
+                    icon: Icon(widget.isLastSection ? Icons.check : Icons.arrow_forward),
+                    label: Text(widget.isLastSection ? 'Finalizar' : 'Siguiente'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xff9ee4b8),
+                      backgroundColor: Color(0xFF00FF7F),
                       foregroundColor: Colors.white,
                       disabledBackgroundColor: Colors.grey,
                     ),

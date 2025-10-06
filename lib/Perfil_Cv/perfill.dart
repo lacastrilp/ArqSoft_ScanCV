@@ -1,8 +1,14 @@
+//TODO
+/**
+ * - Que la info basica este en un cuadrito luego de la foto de perfil
+ * -Pendiente mejora para que el usuario sea el que ingreso seccion
+ * - Que los textos no estén centrados y que no tengan un fondo horrible
+ * - Mostrar una foto de perfil online
+**/
+
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:scanner_personal/Perfil_Cv/edit_Profile_Screen.dart';
+import 'EditProfileScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:scanner_personal/WidgetBarra.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -13,26 +19,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int? _expandedIndex;
   int? _hoverIndex;
   Map<String, dynamic> userData = {};
-  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchUserData();
+    fetchUserData(); // Cargar datos desde Supabase
   }
-// Funcion para los datos de la base de datos Check
+
   Future<void> fetchUserData() async {
     final supabase = Supabase.instance.client;
-    final userId = '3';
+    final userId = '1'; // Reemplaza con el ID válido o pásalo desde otra parte
 
+    //Acá va lo de el usuario que inicia seccion
     try {
       final response = await supabase
           .from('perfil_information')
           .select()
           .eq('id', userId)
           .limit(1)
-          .maybeSingle();
-
+          .single();
       if (response != null) {
         setState(() {
           userData = {
@@ -54,13 +59,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
             "Experiencia Laboral": {
               "Perfil profesional": response['perfil_profesional'] ?? '',
-              "Objetivos Profesionales": response['objetivos_profesionales'] ??
-                  '',
+              "Objetivos Profesionales": response['objetivos_profesionales'] ?? '',
               "Experiencia Laboral": response['experiencia_laboral'] ?? '',
-              "Expectativas Laborales": response['expectativas_laborales'] ??
-                  '',
-              "Experiencia Internacional": response['experiencia_internacional'] ??
-                  '',
+              "Expectativas Laborales": response['expectativas_laborales'] ?? '',
+              "Experiencia Internacional": response['experiencia_internacional'] ?? '',
             },
             "Educación y Conocimientos": {
               "Educación": response['educacion'] ?? '',
@@ -74,114 +76,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
             "Otros": {
               "Referencias": response['referencias'] ?? '',
-              "Permisos y Documentación": response['permisos_documentacion'] ??
-                  '',
+              "Permisos y Documentación": response['permisos_documentacion'] ?? '',
               "Vehículo y Licencias": response['vehiculo_licencias'] ?? '',
-              "Disponibilidad para Entrevistas": response['disponibilidad_entrevistas'] ??
-                  '',
+              "Disponibilidad para Entrevistas": response['disponibilidad_entrevistas'] ?? '',
             }
           };
-        });
-      } else {
-        setState(() {
-          userData = {};
         });
       }
     } catch (error) {
       print("Error al obtener los datos: $error");
-      setState(() {
-        userData = {};
-      });
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
-    final infoPersonal = userData["Información Personal"] ?? {};
     return Scaffold(
-      backgroundColor: Color(0xffffffff),
-      appBar: const CustomAppBar(title: 'Informacion Personal'), // App Bar general con el tituli
-      floatingActionButton:userData.isNotEmpty?
-          // Está el boton flotante de editar el perfil
-      Align(
-        alignment: Alignment.topRight,
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Color(0xFF25AD4C)),
+          onPressed: () {
+            Navigator.pop(context); // 👈 Volver a la pantalla anterior
+          },
+        ),
+        title: Text("Información del Perfil"),
+        backgroundColor: Colors.white54,
+        shadowColor: Colors.black12,
+        surfaceTintColor: Colors.black26,
+        bottomOpacity: 1,
+      ),
+      floatingActionButton: Align(
+        alignment: Alignment.bottomLeft,
         child: Padding(
-          padding: const EdgeInsets.only(right: 20.0, top: 20),
+          padding: const EdgeInsets.only(left: 20.0, bottom: 10),
           child: FloatingActionButton.extended(
-            backgroundColor: Color(0xff9ee4b8),
-            icon: Icon(Icons.edit, color: Color(0xFF090467)),
-            label: Text(
-              'Editar',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Color(0xFF090467),
-              ),
-            ),
-                onPressed: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => EditProfileScreen(
-                        userId: '3', // cambiar por el user autenticado
-                        userData: userData,
-                      ),
-                    ),
-                  );
-                  if (result == true) await fetchUserData();
-                },
-              ),
-            ),
-          )
-          : null,
-
-      // Boby lit solo es para presentar la info
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : userData.isEmpty
-          ? Center(child: Text("No hay datos de perfil disponibles."))
-          : SingleChildScrollView(
-
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            // Alineación a la izquierda
-            children: [
-              _buildProfileHeader(),
-              // Usar un Row para la foto y el texto
-              SizedBox(height: 20),
-              Theme(
-                data: Theme.of(context).copyWith(
-                  dividerColor: Colors.transparent,
-                  iconTheme: IconThemeData(
-                    color: Color(0xFF090467),
+            backgroundColor: Color(0xFF25AD4C),
+            icon: Icon(Icons.edit),
+            label: Text('Editar'),
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => EditProfileScreen(
+                    userId: '1',
+                    userData: userData,
                   ),
                 ),
-                child: ExpansionPanelList(
-                  animationDuration: Duration(milliseconds: 400),
-                  expansionCallback: (index, _) {
-                    setState(() {
-                      _expandedIndex = (_expandedIndex == index) ? null : index;
-                    });
-                  },
-                  children: _buildPanels(),
-                ),
-              ),
+              );
 
-            ],
+              if (result == true) {
+                await fetchUserData(); // 🔁 Refresca los datos si se editó algo
+              }
+            },
           ),
+        ),
+      ),
+      body: userData.isEmpty
+          ? Center(child: CircularProgressIndicator()) // Muestra un indicador de carga
+          : SingleChildScrollView(
+        child: ExpansionPanelList(
+          dividerColor: Colors.transparent,
+          animationDuration: Duration(milliseconds: 400),
+          expansionCallback: (index, _) {
+            setState(() {
+              _expandedIndex = (_expandedIndex == index) ? null : index;
+            });
+          },
+          children: _buildPanels(),
         ),
       ),
     );
   }
 
-  // Acá es donde se presentan las secciones
   List<ExpansionPanel> _buildPanels() {
     List<String> categories = userData.keys.toList();
     return List.generate(categories.length, (index) {
@@ -189,29 +155,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
       var content = userData[category];
 
       return ExpansionPanel(
-        canTapOnHeader: true,
-        backgroundColor: Color(0xffffffff),
-        // Titulos de cada seccion
+        canTapOnHeader: true, // Permite expandir sin la flecha automática
+        backgroundColor: Colors.white54,
         headerBuilder: (context, isExpanded) {
-          return Container(
-            alignment: Alignment.centerLeft,
-            padding: EdgeInsets.all(12),
-            child: Text(
-              category,
-              style: GoogleFonts.poppins(fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF090467)),
+          return MouseRegion(
+            onEnter: (_) => setState(() => _hoverIndex = index),
+            onExit: (_) => setState(() => _hoverIndex = null),
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  _expandedIndex = (_expandedIndex == index) ? null : index;
+                });
+              },
+              child: Container(
+                alignment: Alignment.centerLeft, // Asegura la alineación a la izquierda
+                padding: EdgeInsets.all(8),
+                margin: EdgeInsets.symmetric(horizontal: 0, vertical: 1),
+
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: _hoverIndex == index ? Color(0xFF64319b).withOpacity(0.6):Colors.white24,
+                ),
+
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                 // mainAxisAlignment: MainAxisAlignment.start, // Ajusta alineación
+                  children: [
+                    Text(
+                      textAlign: TextAlign.left,
+                      category,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           );
         },
-        body: Align(
-          alignment: Alignment.centerLeft,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: _buildContent(content),
-            ),
+        body: Container(
+          padding: EdgeInsets.all(8),
+          margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildContent(content),
+              SizedBox(height: 8),
+            ],
           ),
         ),
         isExpanded: _expandedIndex == index,
@@ -219,71 +212,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-// Carta del centro de la pantalla con la info basica
-  Widget _buildProfileHeader() {
-    final photoUrl = userData["Información Personal"]?["Fotografía"] ?? "";
-    return Center(
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundImage: photoUrl.isNotEmpty
-                ? NetworkImage(photoUrl)
-                : AssetImage("assets/avatar.png") as ImageProvider,
-            child: Align(
-              alignment: Alignment.bottomRight,
-              child: Icon(Icons.camera_alt, color: Color(0xFF090467)),
-            ),
-          ),
-          SizedBox(height: 10),
-          _buildBasicInfoCard(),
-        ],
-      ),
-    );
-  }
-  Widget _buildBasicInfoCard() {
-    final info = userData["Información Personal"];
-    if (info == null) return SizedBox.shrink();
-
-    return Card(
-      color: Color(0xffd2e8fc),
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      elevation: 4,
-      child: Padding(
-        padding: EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Información Básica",style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF090467), // Opcional, para asegurar color de texto
-              ),),
-            SizedBox(height: 8),
-            Text("Nombre: ${info['Nombres']} ${info['Apellidos']}", style: GoogleFonts.poppins(fontSize: 16, color: Color(0xFF000000)),),
-            Text("Correo: ${info['Correo electrónico']}",style: GoogleFonts.poppins(fontSize: 16, color: Color(0xFF000000)),),
-            Text("Teléfono: ${info['Teléfono']}",style: GoogleFonts.poppins(fontSize: 16, color: Color(0xFF000000)),),
-            Text("Dirección: ${info['Dirección']}",style: GoogleFonts.poppins(fontSize: 16, color: Color(0xFF000000)),),
-          ],
-        ),
-      ),
-    );
-  }
-// Estilo de la info de las secciones
-  List<Widget> _buildContent(dynamic content) {
-    if (content is Map) {
-      return content.entries.map((entry) {
-        if (entry.key == "Fotografía") return SizedBox();
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8.0),
-          child: Text("${entry.key}: ${entry.value}",
-              style: GoogleFonts.poppins(fontSize: 16, color: Color(0xFF000000), fontWeight: FontWeight.w400)),
-        );
-      }).toList();
+  Widget _buildContent(dynamic content) {
+    if (content is List) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: content.map((item) {
+          if (item is Map) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: 8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: item.entries.map((entry) => Text("${entry.key}: ${entry.value}")).toList(),
+              ),
+            );
+          } else {
+            return Text(item.toString());
+          }
+        }).toList(),
+      );
+    } else if (content is Map) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: content.entries.map((entry) {
+          if (entry.key == "Fotografía" && entry.value.isNotEmpty) {
+            return Image.network(entry.value, height: 100, width: 100);
+          }
+          return Text("${entry.key}: ${entry.value}");
+        }).toList(),
+      );
+    } else {
+      return Text("No hay información disponible");
     }
-    return [
-      Text("No hay información disponible", style: GoogleFonts.poppins(fontSize: 20, color: Color(0xFF000000))),
-    ];
   }
 }

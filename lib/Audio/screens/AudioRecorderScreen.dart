@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'dart:async';
 import 'dart:html' as html;
-
-import '../../WidgetBarra.dart';
 
 class AudioRecorderScreen extends StatefulWidget {
   const AudioRecorderScreen({Key? key}) : super(key: key);
@@ -21,7 +18,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> {
   bool _isRecording = false;
   bool _isPlaying = false;
   String? _filePath;
-// Recording funciones
+
   Future<void> _startRecording() async {
     if (await _audioRecorder.hasPermission()) {
       await _audioRecorder.start();
@@ -30,6 +27,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> {
       });
     }
   }
+
   Future<void> _stopRecording() async {
     final path = await _audioRecorder.stop();
     setState(() {
@@ -37,6 +35,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> {
       _filePath = path;
     });
   }
+
   Future<void> _playRecording() async {
     if (_filePath != null) {
       await _audioPlayer.play(DeviceFileSource(_filePath!));
@@ -62,7 +61,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(title: 'Grabar Audios'),
+      appBar: AppBar(title: Text('Grabar Audio')),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -70,7 +69,6 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> {
             ElevatedButton(
               onPressed: _isRecording ? _stopRecording : _startRecording,
               child: Text(_isRecording ? 'Detener' : 'Grabar'),
-
             ),
             SizedBox(height: 20),
             ElevatedButton(

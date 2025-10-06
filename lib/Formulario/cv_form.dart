@@ -66,9 +66,6 @@ class _CVFormEditorState extends State<CVFormEditor> {
 
     try {
       final user = "3";
-      if (user == null) {
-        throw Exception("No hay usuario autenticado.");
-      }
 
       id = user;
 

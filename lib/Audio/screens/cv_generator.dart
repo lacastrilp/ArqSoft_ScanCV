@@ -2,15 +2,16 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:html' as html;
 import 'package:record/record.dart';
-import '../../WidgetBarra.dart';
 import '../domain/models/cv_section_model.dart';
 import '../presentation/cv_section_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'cv_generator.dart';
 import 'package:audioplayers/audioplayers.dart';
+
 final supabase = Supabase.instance.client;
 
 
@@ -103,13 +104,13 @@ String _normalizarTexto(String texto) {
 
   return textoNormalizado;
 }
+
 class CVGenerator extends StatefulWidget {
   const CVGenerator({Key? key}) : super(key: key);
 
   @override
   _CVGeneratorState createState() => _CVGeneratorState();
 }
-
 
 class _CVGeneratorState extends State<CVGenerator> {
   // Propiedades para manejo de audio
@@ -186,10 +187,9 @@ class _CVGeneratorState extends State<CVGenerator> {
         if (!permissionGranted) {
           // Manejar la falta de permisos
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Se requieren permisos de micrófono para grabar audio',style: GoogleFonts.poppins(fontWeight: FontWeight.bold,
-                  fontSize: 18,color : Color(0xFF090467)),),
-              backgroundColor: Color(0xff9ee4b8),
+            const SnackBar(
+              content: Text('Se requieren permisos de micrófono para grabar audio'),
+              backgroundColor: Colors.red,
             ),
           );
           return;
@@ -293,13 +293,11 @@ class _CVGeneratorState extends State<CVGenerator> {
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          title: Text('Finalizar y procesar',style: GoogleFonts.poppins(fontWeight: FontWeight.bold,
-              fontSize: 18,color : Color(0xFF090467)),),
+          title: Text('Finalizar y procesar'),
           content: Text(
               '¿Has terminado de grabar todas las secciones? ' +
                   'Al continuar, se procesarán todos los audios y se generará tu hoja de vida. ' +
-                  'Este proceso puede tardar varios minutos.',style:GoogleFonts.poppins(
-              fontSize: 13,color : Color(0xFF090467)),
+                  'Este proceso puede tardar varios minutos.'
           ),
           actions: [
             TextButton(
@@ -308,7 +306,6 @@ class _CVGeneratorState extends State<CVGenerator> {
               },
               child: Text('Cancelar'),
               style: TextButton.styleFrom(
-                backgroundColor: Color(0xff9ee4b8),
                 foregroundColor: Colors.grey[700],
               ),
             ),
@@ -317,15 +314,11 @@ class _CVGeneratorState extends State<CVGenerator> {
                 Navigator.of(context).pop();
                 _processAllAudios();
               },
+              child: Text('Continuar'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFF00FF7F),
                 foregroundColor: Colors.white,
               ),
-              child: Text('Continuar',style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Color(0xFF090467),
-                ),),
             ),
           ],
         );
@@ -528,7 +521,7 @@ class _CVGeneratorState extends State<CVGenerator> {
             .insert(audioRecord)
             .select('id');
 
-        print("Información guardada correctamente en la base de datos",);
+        print("Información guardada correctamente en la base de datos");
 
         // Obtener el ID del registro recién creado
         if (insertResponse.isNotEmpty) {
@@ -540,7 +533,7 @@ class _CVGeneratorState extends State<CVGenerator> {
 
         // Cargar la información extraída por la IA para editar
         _editableInfo = analyzedTranscription;
-        _asegurarTiposDeDatos(); // Llamar al nuevo métdo para asegurar tipos
+        _asegurarTiposDeDatos(); // Llamar al nuevo método para asegurar tipos
 
         // Proceso completado
         setState(() {
@@ -558,8 +551,8 @@ class _CVGeneratorState extends State<CVGenerator> {
         // Mostrar el error al usuario
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al guardar en la base de datos: $e',style: GoogleFonts.poppins(color: Color(0xff090467)),),
-            backgroundColor: Color(0xff9ee4b8),
+            content: Text('Error al guardar en la base de datos: $e'),
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -573,14 +566,14 @@ class _CVGeneratorState extends State<CVGenerator> {
       // Mostrar el error al usuario
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Ocurrió un error durante el procesamiento: $e',style: GoogleFonts.poppins(color: Color(0xff090467)),),
-          backgroundColor: Color(0xff9ee4b8),
+          content: Text('Ocurrió un error durante el procesamiento: $e'),
+          backgroundColor: Colors.red,
         ),
       );
     }
   }
 
-  // Métdo para transcribir audio usando AssemblyAI
+  // Método para transcribir audio usando AssemblyAI
   Future<String> _transcribirAudio(String audioUrl) async {
     print("Iniciando transcripción para URL: $audioUrl");
     String transcripcion = "";
@@ -772,7 +765,7 @@ IMPORTANTE: Tu respuesta debe ser ÚNICAMENTE un JSON válido que contenga EXACT
             rawJson = json.decode(cleanedContent);
           }
 
-          // Convertir to a tipos Dart seguros (especialmente importante para Flutter web)
+          // Convertir todo a tipos Dart seguros (especialmente importante para Flutter web)
           Map<String, dynamic> parsedJson = convertToSafeDartType(rawJson);
 
           // Asegurar que todos los campos requeridos existen
@@ -844,7 +837,7 @@ IMPORTANTE: Tu respuesta debe ser ÚNICAMENTE un JSON válido que contenga EXACT
     }
   }
 
-  // Métdo para validar información con la IA
+  // Método para validar información con la IA
   Future<bool> _validateInfoWithAI() async {
     try {
       final openRouterApiKey = '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';
@@ -1051,7 +1044,7 @@ O si hay errores:
     }
   }
 
-  // Métdo para mostrar errores de validación de forma legible
+  // Método para mostrar errores de validación de forma legible
   void _mostrarErroresValidacion(List<dynamic> errores) {
     if (errores.isEmpty) return;
 
@@ -1103,14 +1096,6 @@ O si hay errores:
     _initializeAudioHandlers();
   }
 
-
-
-
-
-
-
-
-  // ACA SI ESTÄ EL FRONT <-----------------
   @override
   Widget build(BuildContext context) {
     // Si estamos procesando o ya completamos, mostrar pantalla correspondiente
@@ -1120,7 +1105,12 @@ O si hay errores:
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      appBar: const CustomAppBar(title: 'Graba tu hoja de vida'),
+      appBar: AppBar(
+        title: Text('Generador de Hojas de Vida'),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+      ),
       body: Column(
         children: [
           // Indicador de progreso
@@ -1128,14 +1118,14 @@ O si hay errores:
             padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
             child: LinearProgressIndicator(
               value: (_currentSectionIndex + 1) / cvSections.length,
-              backgroundColor: Color(0xffffffff),
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF090467)),
+              backgroundColor: Colors.grey[300],
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00FF7F)),
               minHeight: 10,
               borderRadius: BorderRadius.circular(10),
             ),
           ),
 
-          // Contador de pasos y secciones en la que voy
+          // Contador de pasos
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
@@ -1143,18 +1133,18 @@ O si hay errores:
               children: [
                 Text(
                   'Paso ${_currentSectionIndex + 1} de ${cvSections.length}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF090467),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[700],
                   ),
                 ),
                 Text(
                   cvSections[_currentSectionIndex].title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF090467),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF00FF7F),
                   ),
                 ),
               ],
@@ -1200,11 +1190,14 @@ O si hay errores:
 
   Widget _buildProcessingScreen() {
     // Color verde de la aplicación
-    final Color primaryGreen = Color(0xff9ee4b8);
+    final Color primaryGreen = Color(0xFF00FF7F);
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar:  CustomAppBar(title: _isComplete ? 'Revisar Información' : 'Procesando'),
+      appBar: AppBar(
+        title: Text(_isComplete ? 'Revisar Información' : 'Procesando'),
+        backgroundColor: primaryGreen,
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -1220,11 +1213,7 @@ O si hay errores:
                     const SizedBox(height: 20),
                     Text(
                       _processingStatus,
-                      style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 18,
-                      color: Color(0xFF090467),
-                    ),
+                      style: const TextStyle(fontSize: 16),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -1244,7 +1233,7 @@ O si hay errores:
                     const SizedBox(height: 20),
                     Text(
                       'Error: $_processingStatus',
-                      style: GoogleFonts.poppins(fontSize: 16, color: Colors.red),
+                      style: const TextStyle(fontSize: 16, color: Colors.red),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -1331,10 +1320,10 @@ O si hay errores:
             children: [
               Text(
                 'Revisa y edita la información extraída',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18,
-                  color: Color(0xFF090467),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -1346,7 +1335,7 @@ O si hay errores:
                   decoration: BoxDecoration(
                     color: _formError.contains('Validando')
                         ? Colors.blue.shade100
-                        : Color(0xff9ee4b8),
+                        : Colors.red.shade100,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -1365,10 +1354,10 @@ O si hay errores:
                         ),
                       Text(
                         _formError,
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(
                             color: _formError.contains('Validando')
                                 ? Colors.blue.shade800
-                                : Color(0xff9ee4b8),
+                                : Colors.red.shade800
                         ),
                       ),
                     ],
@@ -1392,10 +1381,10 @@ O si hay errores:
                     children: [
                       Text(
                         fieldLabel,
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: Color(0xFF090467),
+                          fontSize: 16,
+                          color: primaryColor,
                         ),
                       ),
                       const SizedBox(height: 5),
@@ -1405,19 +1394,15 @@ O si hay errores:
                           maxLines: 4,
                           decoration: InputDecoration(
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),        // esquinas suaves
-                              borderSide: BorderSide(color: Color(0xFF090467)),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: Color(0xFF090467), width: 1),
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: primaryColor),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: Color(0xff9ee4b8), width: 2),
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: primaryColor, width: 2),
                             ),
                             hintText: 'Ingrese $fieldLabel',
-                            hintStyle: GoogleFonts.poppins(color: Color(0xFF090467)),
+                            hintStyle: TextStyle(color: Colors.grey.shade400),
                           ),
                           onChanged: (value) {
                             setState(() {
@@ -1430,19 +1415,15 @@ O si hay errores:
                           initialValue: safeInfo[fieldName] ?? '',
                           decoration: InputDecoration(
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),        // esquinas suaves
-                              borderSide: BorderSide(color: Color(0xFF090467)),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: Color(0xFF090467), width: 1),
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: primaryColor),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: Color(0xff9ee4b8), width: 2),
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: primaryColor, width: 2),
                             ),
                             hintText: 'Ingrese $fieldLabel',
-                            hintStyle: GoogleFonts.poppins(color: Color(0xFF090467)),
+                            hintStyle: TextStyle(color: Colors.grey.shade400),
                           ),
                           onChanged: (value) {
                             setState(() {
@@ -1465,7 +1446,6 @@ O si hay errores:
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
                 style: ElevatedButton.styleFrom(
-                  // Pendiente que es y como le camibo los colores
                   foregroundColor: Colors.white,
                   backgroundColor: Colors.grey,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -1473,13 +1453,13 @@ O si hay errores:
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: Text('Cancelar',style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),),
+                child: const Text('Cancelar'),
               ),
               ElevatedButton(
                 onPressed: _isFormLoading ? null : _saveEditedInfo,
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.white,
-                  backgroundColor: Color(0xff9ee4b8),
+                  backgroundColor: primaryColor,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -1498,10 +1478,10 @@ O si hay errores:
                       ),
                     ),
                     const SizedBox(width: 10),
-                     Text('Guardando...',style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),),
+                    const Text('Guardando...'),
                   ],
                 )
-                    :  Text('Guardar información',style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),),
+                    : const Text('Guardar información'),
               ),
             ],
           ),
@@ -1601,9 +1581,9 @@ O si hay errores:
 
       // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
-         SnackBar(
-          content: Text('Información guardada correctamente',style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),),
-           backgroundColor: Color(0xff9ee4b8),
+        const SnackBar(
+          content: Text('Información guardada correctamente'),
+          backgroundColor: Colors.green,
         ),
       );
 
@@ -1618,7 +1598,7 @@ O si hay errores:
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error al guardar: $e',style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+          content: Text('Error al guardar: $e'),
           backgroundColor: Colors.red,
         ),
       );

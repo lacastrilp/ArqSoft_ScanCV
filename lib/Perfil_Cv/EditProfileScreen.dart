@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -19,6 +18,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final Map<String, String> fieldMapping = {
     "Nombres": "nombres",
     "Apellidos": "apellidos",
+    "Fotografía": "fotografia",
     "Dirección": "direccion",
     "Teléfono": "telefono",
     "Correo electrónico": "correo",
@@ -48,14 +48,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     "Disponibilidad para Entrevistas": "disponibilidad_entrevistas",
   };
 
-  final Set<String> _nonEditableFields = {
-    "Nombres",
-    "Apellidos",
-    "Fecha de nacimiento",
-    "Nacionalidad",
-    "Dirección",
-  };
-
   @override
   void initState() {
     super.initState();
@@ -76,17 +68,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _saveChanges() async {
     final updates = <String, dynamic>{};
+
     fieldMapping.forEach((label, key) {
-      if (!_nonEditableFields.contains(label)) {
-        updates[key] = _controllers[label]?.text ?? '';
-      }
+      updates[key] = _controllers[label]?.text ?? '';
     });
 
     try {
       final supabase = Supabase.instance.client;
-      await supabase.from('perfil_information').update(updates).eq('id', widget.userId);
+      await supabase
+          .from('perfil_information')
+          .update(updates)
+          .eq('id', widget.userId);
+
       Navigator.pop(context, true);
     } catch (error) {
+      print('Error al guardar cambios: $error');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al guardar los cambios.')),
       );
@@ -102,28 +98,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(
-          'Editar Perfil',
-          style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 1,
-        iconTheme: IconThemeData(color: Colors.black),
-        actions: [
-          TextButton.icon(
-            onPressed: _saveChanges,
-            icon: Icon(Icons.save, color: Color(0xFF25AD4C)),
-            label: Text(
-              'Guardar',
-              style: GoogleFonts.poppins(
-                color: Color(0xFF25AD4C),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
+        title: Text('Editar Perfil'),
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16.0),
@@ -132,27 +108,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: Column(
             children: [
               ...fieldMapping.keys.map((label) {
-                final isDisabled = _nonEditableFields.contains(label);
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: TextFormField(
                     controller: _controllers[label],
-                    enabled: !isDisabled,
-                    style: GoogleFonts.poppins(
-                      color: isDisabled ? Colors.grey  : Colors.black87,
-                    ),
                     decoration: InputDecoration(
                       labelText: label,
-                      labelStyle: GoogleFonts.poppins(),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: isDisabled ? Colors.grey.shade200 : Colors.grey.shade100,
+                      border: OutlineInputBorder(),
                     ),
                   ),
                 );
               }).toList(),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _saveChanges,
+                child: Text('Guardar Cambios'),
+              ),
             ],
           ),
         ),

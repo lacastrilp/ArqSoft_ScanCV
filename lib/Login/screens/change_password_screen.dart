@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:scanner_personal/WidgetBarra.dart';
 
 class CambiarPasswordScreen extends StatefulWidget {
   @override
@@ -143,7 +142,7 @@ class _CambiarPasswordScreenState extends State<CambiarPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(title: 'Cambiar Contraseña'),
+      appBar: AppBar(title: const Text('Nueva contraseña')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Form(
