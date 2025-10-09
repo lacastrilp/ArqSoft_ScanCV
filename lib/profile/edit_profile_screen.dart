@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:scanner_personal/WidgetBarra.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../Formulario/cv_form_unified.dart';
+import '../form/cv_form_unified.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final String userId;

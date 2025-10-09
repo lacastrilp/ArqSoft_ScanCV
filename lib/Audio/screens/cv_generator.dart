@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../Formulario/cv_form_unified.dart';
+import '../../form/cv_form_unified.dart';
 import '../constants/cv_sections.dart';
 import '../models/cv_section_model.dart';
 import '../presentation/cv_section_card.dart';

@@ -6,9 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:scanner_personal/Configuracion/mainConfig.dart';
-import '../Audio/screens/cv_generator.dart';
-import '../Formulario/cv_form_unified.dart';
+import 'package:scanner_personal/setting/mainConfig.dart';
+import '../audio/screens/cv_generator.dart';
+import '../form/cv_form_unified.dart';
 
 
 final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
