@@ -13,7 +13,7 @@ class SplashScreen extends StatelessWidget {
           children: [
             // Puedes usar un logo aquí
             Image.asset(
-              'assets/logo.png', // reemplazalo con tu logo
+              'assets/logoM.png', // reemplazalo con tu logo
               height: 120,
             ),
             const SizedBox(height: 24),

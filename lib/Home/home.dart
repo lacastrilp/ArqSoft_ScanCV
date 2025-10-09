@@ -5,10 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:scanner_personal/Formulario/main.dart';
-import 'package:scanner_personal/Login/data_base/database_helper.dart';
+import 'package:scanner_personal/Formulario/cv_form.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:scanner_personal/Configuracion/mainConfig.dart';
+
+
 
 import '../Audio/screens/AudioRecorderScreen.dart';
 import '../Audio/screens/cv_generator.dart';
@@ -47,27 +48,8 @@ class HomeScreen extends StatelessWidget {
               },
             ),
 
-            ListTile(
-              leading: Icon(Icons.lock),
-              title: Text('Cambiar contraseña', style: GoogleFonts.poppins()),
-              onTap: () {
-                Navigator.pushNamed(context, '/change-password');
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.logout),
-              title: Text('Cerrar sesión', style: GoogleFonts.poppins()),
-              onTap: () async {
-                await DatabaseHelper.instance.cerrarSesion();
-
-                if (!context.mounted) return;
-
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  '/login',
-                      (route) => false,
-                );
-              },
-            ),
+           
+            
             Divider(), // Separador visual
 
             // 📚 Opciones adicionales de configuración:
@@ -295,7 +277,7 @@ class HomeScreen extends StatelessWidget {
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => PantallaSubirCV(initialAction: 'formulario')),
+                                MaterialPageRoute(builder: (_) => const CVFormEditor()),
                               );
                             },
                           ),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -11,6 +12,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'cv_generator.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
+
+
+
 
 final supabase = Supabase.instance.client;
 
@@ -114,10 +122,12 @@ class CVGenerator extends StatefulWidget {
 
 class _CVGeneratorState extends State<CVGenerator> {
   // Propiedades para manejo de audio
-  Record _audioRecorder = Record();
+  final AudioRecorder _audioRecorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isRecording = false;
   bool _isPlaying = false;
+  String? _filePath;
+  
 
   // Propiedades para manejo de datos del CV
   int _currentSectionIndex = 0;
@@ -138,18 +148,49 @@ class _CVGeneratorState extends State<CVGenerator> {
   String _formError = '';
   String _recordId = '';
 
-  // Intenta corregir el problema de JSArray vs String en Flutter web
-  // Asegurarse de que todos los mapas se convierten a Map<String, String> forzosamente
-  void _asegurarTiposDeDatos() {
-    Map<String, dynamic> temp = {};
-
+  // ==== SUBIR AUDIO A SUPABASE ====
+  Future<String?> _uploadAudioToSupabase(String path, String sectionId) async {
     try {
+      final fileName = 'audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final storagePath = 'audios/$fileName';
+
+      Uint8List bytes;
+
+      if (kIsWeb) {
+        // En web, obtener blob del path
+        final blob = await html.HttpRequest.request(path, responseType: 'blob');
+        final reader = html.FileReader();
+        final completer = Completer<Uint8List>();
+        reader.readAsArrayBuffer(blob.response);
+        reader.onLoadEnd.listen((_) {
+          completer.complete(reader.result as Uint8List);
+        });
+        bytes = await completer.future;
+      } else {
+        // En móviles, leer archivo directamente
+        bytes = await File(path).readAsBytes();
+      }
+
+      await supabase.storage.from('audios').uploadBinary(storagePath, bytes);
+      final publicUrl = supabase.storage.from('audios').getPublicUrl(storagePath);
+
+      return publicUrl;
+    } catch (e, s) {
+      print("❌ Error al subir audio a Supabase: $e\n$s");
+      return null;
+    }
+  }
+
+
+
+  // ==== ASEGURAR TIPOS ====
+  void _asegurarTiposDeDatos() {
+    try {
+      Map<String, dynamic> temp = {};
       _editableInfo.forEach((key, value) {
         if (value is List) {
-          // Si es una lista, convertirla a String para la visualización
           temp[key] = value.join(", ");
         } else if (value is Map) {
-          // Si es un mapa, convertirlo a String para la visualización
           temp[key] = json.encode(value);
         } else if (value == null) {
           temp[key] = "";
@@ -157,35 +198,33 @@ class _CVGeneratorState extends State<CVGenerator> {
           temp[key] = value.toString();
         }
       });
-
-      // Reemplazar _editableInfo con la versión segura
       _editableInfo = temp;
-      print("DEPURANDO: Tipos de datos asegurados correctamente");
+      print("✅ DEPURANDO: Tipos de datos asegurados correctamente");
     } catch (e) {
-      print("DEPURANDO: Error al asegurar tipos de datos: $e");
+      print("❌ DEPURANDO: Error al asegurar tipos de datos: $e");
     }
   }
 
-  // Función para solicitar permisos de audio
+  // ==== PERMISOS ====
   Future<bool> _requestPermission() async {
     try {
       return await _audioRecorder.hasPermission();
     } catch (e) {
-      print("Error al solicitar permisos: $e");
+      print("❌ Error al solicitar permisos: $e");
       return false;
     }
   }
 
   Future<void> _initializeAudioHandlers() async {
     try {
-      await _audioRecorder.dispose();
-      _audioRecorder = Record();
+      if (await _audioRecorder.isRecording()) {
+        await _audioRecorder.stop();
+      }
 
       bool hasPermission = await _audioRecorder.hasPermission();
       if (!hasPermission) {
         bool permissionGranted = await _requestPermission();
         if (!permissionGranted) {
-          // Manejar la falta de permisos
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Se requieren permisos de micrófono para grabar audio'),
@@ -197,76 +236,131 @@ class _CVGeneratorState extends State<CVGenerator> {
       }
 
       _audioPlayer.onPlayerComplete.listen((event) {
-        setState(() {
-          _isPlaying = false;
-        });
+        setState(() => _isPlaying = false);
       });
 
-      print("Audio handlers inicializados correctamente");
+      print("🎧 Audio handlers inicializados correctamente");
     } catch (e) {
-      print("Error al inicializar el grabador: $e");
+      print("❌ Error al inicializar el grabador: $e");
     }
   }
 
+  // ==== INICIAR GRABACIÓN ====
   Future<void> _startRecording() async {
     try {
       if (_isRecording) {
         await _audioRecorder.stop();
       }
 
-      // Reinicia el grabador
       await _initializeAudioHandlers();
+
+      bool hasPermission = await _audioRecorder.hasPermission();
+      if (!hasPermission) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se concedieron permisos para grabar audio.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Crear path solo en móviles
+      String? path;
+      if (!kIsWeb) {
+        final dir = await getTemporaryDirectory();
+        path = p.join(dir.path, 'grabacion_${DateTime.now().millisecondsSinceEpoch}.m4a');
+
+        await _audioRecorder.start(
+          const RecordConfig(
+            encoder: AudioEncoder.aacLc,
+            bitRate: 128000,
+            sampleRate: 44100,
+          ),
+          path: path, // En móviles
+        );
+      } else {
+        // En web, iniciar sin path
+        await _audioRecorder.start(
+          const RecordConfig(
+            encoder: AudioEncoder.aacLc,
+            bitRate: 128000,
+            sampleRate: 44100,
+          ), path: '',
+        );
+      }
 
       setState(() {
         _isRecording = true;
+        _processingStatus = '🎙 Grabando...';
       });
 
-      await _audioRecorder.start();
-    } catch (e) {
-      print("Error al iniciar grabación: $e");
-      setState(() {
-        _isRecording = false;
-      });
+      print("✅ Grabación iniciada correctamente");
+    } catch (e, s) {
+      print("❌ Error al iniciar grabación: $e\n$s");
+      setState(() => _isRecording = false);
     }
   }
 
+  // ==== DETENER GRABACIÓN Y SUBIR A SUPABASE ====
   Future<void> _stopRecording() async {
     if (!_isRecording) return;
 
     try {
       final path = await _audioRecorder.stop();
+
       setState(() {
         _isRecording = false;
-        // Guardar la URL del audio para la sección actual
-        _audioUrls[cvSections[_currentSectionIndex].id] = path!;
+        _processingStatus = 'Grabación detenida';
       });
-    } catch (e) {
-      print("Error al detener grabación: $e");
-      setState(() {
-        _isRecording = false;
-      });
+
+      if (path == null || path.isEmpty) {
+        print("⚠️ No se obtuvo un path válido (posiblemente Web)");
+        return;
+      }
+
+      print("🎙 Grabación finalizada: $path");
+
+      // Subir el archivo grabado a Supabase Storage
+      final sectionId = cvSections[_currentSectionIndex].id;
+      final publicUrl = await _uploadAudioToSupabase(path, sectionId);
+
+      if (publicUrl != null) {
+        setState(() {
+          _audioUrls[sectionId] = publicUrl;
+        });
+        print("✅ Audio subido a Supabase: $publicUrl");
+      } else {
+        print("⚠️ Error al subir el audio a Supabase");
+      }
+    } catch (e, s) {
+      print("❌ Error al detener grabación: $e\n$s");
+      setState(() => _isRecording = false);
     }
   }
 
+  // ==== REPRODUCIR AUDIO ====
   Future<void> _playRecording() async {
-    if (_isPlaying) {
-      await _audioPlayer.stop();
-      setState(() {
-        _isPlaying = false;
-      });
-      return;
-    }
-
-    final audioUrl = _audioUrls[cvSections[_currentSectionIndex].id];
-    if (audioUrl != null) {
-      try {
-        await _audioPlayer.play(DeviceFileSource(audioUrl));
-        setState(() {
-          _isPlaying = true;
-        });
-      } catch (e) {
-        print("Error al reproducir audio: $e");
+    try {
+      if (_isPlaying) {
+        await _audioPlayer.stop();
+        setState(() => _isPlaying = false);
+        return;
       }
+
+      final audioUrl = _audioUrls[cvSections[_currentSectionIndex].id];
+
+      if (audioUrl != null && audioUrl.isNotEmpty) {
+        await _audioPlayer.play(DeviceFileSource(audioUrl)); // ✅ Ya no hay error de tipo
+        setState(() => _isPlaying = true);
+      } else {
+        print("⚠️ No hay audio para reproducir en esta sección.");
+      }
+    } catch (e) {
+      print("❌ Error al reproducir audio: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al reproducir audio: $e')),
+      );
     }
   }
 
@@ -586,7 +680,7 @@ class _CVGeneratorState extends State<CVGenerator> {
       );
 
       uploadRequest.headers.addAll({
-        'authorization': '127d118f76c446a0ad8dce63a120336d',
+        'authorization': '61caf9b1c241438e9202ec2dc3fd88d3',
         'content-type': 'application/json',
       });
 
@@ -619,7 +713,7 @@ class _CVGeneratorState extends State<CVGenerator> {
           try {
             var pollingResponse = await http.get(
               Uri.parse(pollingEndpoint),
-              headers: {'authorization': '127d118f76c446a0ad8dce63a120336d'},
+              headers: {'authorization': '61caf9b1c241438e9202ec2dc3fd88d3'},
             );
 
             var pollingJson = json.decode(pollingResponse.body);
@@ -661,390 +755,239 @@ class _CVGeneratorState extends State<CVGenerator> {
     return transcripcion;
   }
 
+  // Analiza la transcripción con GPT-4.1-mini (OpenRouter)
   Future<Map<String, dynamic>> _analizarTranscripcionConLLM(String transcripcion) async {
     try {
-      final openRouterApiKey = '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';
+      final openRouterApiKey = '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';
       final openRouterUrl = Uri.parse('https://openrouter.ai/api/v1/chat/completions');
 
-      // Construir el prompt para el LLM
+      // 🧹 Limpieza del texto para evitar errores por codificación o moderación
+      final sanitizedTranscription = transcripcion
+          .replaceAll(RegExp(r'[^\x00-\x7F]'), '')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+
       final prompt = '''
-Analiza la siguiente transcripción de audio y extrae toda la información relevante para un CV (hoja de vida).
+  Analiza la siguiente transcripción de audio y extrae toda la información relevante para un CV (hoja de vida).
 
-Devuelve SOLO un objeto JSON con la información extraída, sin comentarios ni marcado adicional.
+  Devuelve SOLO un objeto JSON con la información extraída, sin comentarios ni texto adicional.
 
-Transcripción: "$transcripcion"
+  Transcripción: "$sanitizedTranscription"
 
-IMPORTANTE: Tu respuesta debe ser ÚNICAMENTE un JSON válido que contenga EXACTAMENTE los siguientes campos (deja vacíos los que no se mencionan):
-{
-  "nombres": "",
-  "apellidos": "",
-  "fotografia": "",
-  "direccion": "",
-  "telefono": "",
-  "correo": "",
-  "nacionalidad": "",
-  "fecha_nacimiento": "",
-  "estado_civil": "",
-  "linkedin": "",
-  "github": "",
-  "portafolio": "",
-  "perfil_profesional": "",
-  "objetivos_profesionales": "",
-  "experiencia_laboral": "",
-  "educacion": "",
-  "habilidades": "",
-  "idiomas": "",
-  "certificaciones": "",
-  "proyectos": "",
-  "publicaciones": "",
-  "premios": "",
-  "voluntariados": "",
-  "referencias": "",
-  "expectativas_laborales": "",
-  "experiencia_internacional": "",
-  "permisos_documentacion": "",
-  "vehiculo_licencias": "",
-  "contacto_emergencia": "",
-  "disponibilidad_entrevistas": ""
-}
-''';
+  IMPORTANTE: Tu respuesta debe ser ÚNICAMENTE un JSON válido que contenga EXACTAMENTE los siguientes campos (deja vacíos los que no se mencionan):
+  {
+    "nombres": "",
+    "apellidos": "",
+    "direccion": "",
+    "telefono": "",
+    "correo": "",
+    "nacionalidad": "",
+    "fecha_nacimiento": "",
+    "estado_civil": "",
+    "linkedin": "",
+    "github": "",
+    "portafolio": "",
+    "perfil_profesional": "",
+    "objetivos_profesionales": "",
+    "experiencia_laboral": "",
+    "educacion": "",
+    "habilidades": "",
+    "idiomas": "",
+    "certificaciones": "",
+    "proyectos": "",
+    "publicaciones": "",
+    "premios": "",
+    "voluntariados": "",
+    "referencias": "",
+    "expectativas_laborales": "",
+    "experiencia_internacional": "",
+    "permisos_documentacion": "",
+    "vehiculo_licencias": "",
+    "contacto_emergencia": "",
+    "disponibilidad_entrevistas": ""
+  }
+  ''';
 
-      // Construir el payload para la API
       final payload = {
-        'messages': [
+        "model": "openai/gpt-4.1-mini",
+        "messages": [
           {
-            'role': 'user',
-            'content': prompt,
+            "role": "user",
+            "content": [
+              {"type": "text", "text": prompt}
+            ]
           }
         ],
-        'model': 'meta-llama/llama-4-maverick:free',
-        'max_tokens': 2000,
-        'temperature': 0.3,
+        "max_tokens": 2000,
+        "temperature": 0.3,
       };
 
-      // Realizar la llamada a la API
       final response = await http.post(
         openRouterUrl,
         headers: {
           'Authorization': 'Bearer $openRouterApiKey',
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://cv-generator-app.com',
+          'HTTP-Referer': 'http://localhost:8080',
+          'X-Title': 'Scanner Personal',
         },
         body: json.encode(payload),
       );
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        final jsonResponse = json.decode(response.body);
-
-        // Extraer el contenido de la respuesta
+        final decodedBody = utf8.decode(response.bodyBytes);
+        final jsonResponse = json.decode(decodedBody);
         final content = jsonResponse['choices'][0]['message']['content'] as String;
 
-        try {
-          // Eliminar posibles decoradores markdown como ```json y ``` que podría incluir el LLM
-          String cleanedContent = content.replaceAll('```json', '').replaceAll('```', '').trim();
+        print("🧠 Respuesta bruta del modelo (transcripción):\n$content");
 
-          // Eliminar texto que no sea parte del JSON
-          RegExp jsonRegex = RegExp(r'(\{.*\})', dotAll: true);
-          var match = jsonRegex.firstMatch(cleanedContent);
+        // 🧹 Limpieza avanzada del JSON devuelto
+        String cleanedContent = content
+            .replaceAll('```json', '')
+            .replaceAll('```', '')
+            .replaceAll('“', '"')
+            .replaceAll('”', '"')
+            .replaceAll("’", "'")
+            .replaceAll("`", "")
+            .trim();
 
-          if (match != null) {
-            cleanedContent = match.group(1) ?? cleanedContent;
-          }
+        final match = RegExp(r'\{[\s\S]*\}').firstMatch(cleanedContent);
+        if (match == null) throw Exception("❌ No se encontró un bloque JSON válido.");
 
-          cleanedContent = cleanedContent.trim();
-          print("Contenido limpio para JSON parsing: $cleanedContent");
+        String jsonStr = match.group(0)!;
+        final closingIndex = jsonStr.lastIndexOf('}');
+        if (closingIndex != -1) jsonStr = jsonStr.substring(0, closingIndex + 1);
+        jsonStr = jsonStr.replaceAll(RegExp(r'[^\x00-\x7F]'), '');
 
-          dynamic rawJson;
-          try {
-            rawJson = json.decode(cleanedContent);
-          } catch (e) {
-            // Si falla, intenta una limpieza más agresiva
-            // Quitar caracteres no ASCII
-            cleanedContent = cleanedContent.replaceAll(RegExp(r'[^\x00-\x7F]'), '');
-            print("Segunda limpieza: $cleanedContent");
-            rawJson = json.decode(cleanedContent);
-          }
+        print("🧹 JSON limpiado (transcripción):\n$jsonStr");
 
-          // Convertir todo a tipos Dart seguros (especialmente importante para Flutter web)
-          Map<String, dynamic> parsedJson = convertToSafeDartType(rawJson);
-
-          // Asegurar que todos los campos requeridos existen
-          final camposRequeridos = [
-            'nombres', 'apellidos', 'fotografia', 'direccion', 'telefono', 'correo',
-            'nacionalidad', 'fecha_nacimiento', 'estado_civil', 'linkedin', 'github',
-            'portafolio', 'perfil_profesional', 'objetivos_profesionales',
-            'experiencia_laboral', 'educacion', 'habilidades', 'idiomas',
-            'certificaciones', 'proyectos', 'publicaciones', 'premios',
-            'voluntariados', 'referencias', 'expectativas_laborales',
-            'experiencia_internacional', 'permisos_documentacion',
-            'vehiculo_licencias', 'contacto_emergencia', 'disponibilidad_entrevistas'
-          ];
-
-          // Agregar campos faltantes
-          for (var campo in camposRequeridos) {
-            if (!parsedJson.containsKey(campo)) {
-              parsedJson[campo] = "";
-            }
-          }
-
-          print("JSON parseado correctamente con todos los campos requeridos");
-          return parsedJson;
-        } catch (e) {
-          print("Error al parsear el JSON del LLM: $e");
-          throw Exception("El LLM no devolvió un JSON válido: $e");
-        }
+        final parsed = json.decode(jsonStr);
+        return parsed.cast<String, dynamic>();
       } else {
-        print("Error al llamar a OpenRouter: ${response.statusCode}");
-        print("Respuesta: ${response.body}");
-        throw Exception("Error en la API de OpenRouter: ${response.statusCode}");
+        print('❌ Error OpenRouter: ${response.statusCode}');
+        print('Respuesta: ${response.body}');
+        throw Exception('Error ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      print("Error al analizar la transcripción: $e");
-      // Devolver un objeto JSON vacío en caso de error, pero con TODOS los campos requeridos
-      return {
-        "error": "No se pudo analizar la transcripción: $e",
-        "nombres": "",
-        "apellidos": "",
-        "fotografia": "",
-        "direccion": "",
-        "telefono": "",
-        "correo": "",
-        "nacionalidad": "",
-        "fecha_nacimiento": "",
-        "estado_civil": "",
-        "linkedin": "",
-        "github": "",
-        "portafolio": "",
-        "perfil_profesional": "",
-        "objetivos_profesionales": "",
-        "experiencia_laboral": "",
-        "educacion": "",
-        "habilidades": "",
-        "idiomas": "",
-        "certificaciones": "",
-        "proyectos": "",
-        "publicaciones": "",
-        "premios": "",
-        "voluntariados": "",
-        "referencias": "",
-        "expectativas_laborales": "",
-        "experiencia_internacional": "",
-        "permisos_documentacion": "",
-        "vehiculo_licencias": "",
-        "contacto_emergencia": "",
-        "disponibilidad_entrevistas": ""
-      };
+      print('❌ Error al analizar transcripción: $e');
+      return {"error": e.toString()};
     }
   }
 
-  // Método para validar información con la IA
+  // Validar la información estructurada del CV usando GPT-4.1-mini
   Future<bool> _validateInfoWithAI() async {
     try {
-      final openRouterApiKey = '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';
+      final openRouterApiKey = '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';
       final openRouterUrl = Uri.parse('https://openrouter.ai/api/v1/chat/completions');
 
-      // Construir el prompt para el LLM - hacerlo más específico para evitar respuestas inválidas
-      final prompt = '''
-Valida la siguiente información de un CV y devuelve un JSON con los errores encontrados.
+      final sanitizedInfo = json.encode(_editableInfo).replaceAll(RegExp(r'[^\x00-\x7F]'), '');
 
-INSTRUCCIONES IMPORTANTES:
-1. DEBES devolver un objeto JSON válido con EXACTAMENTE la estructura que se indica abajo.
-2. NO incluyas ningún texto adicional antes o después del JSON.
-3. El campo "esValido" debe ser exactamente true o false (booleano).
-4. El campo "errores" debe ser un array, incluso si está vacío.
+      final prompt = '''
+Eres un asistente que valida información de hojas de vida. 
+
+INSTRUCCIONES:
+- Analiza la información, pero **NO rechaces ni bloquees** el CV por campos vacíos o menores.
+- Solo devuelve errores graves (ej: JSON roto, tipo de dato incorrecto, texto ininteligible).
+- Si el texto parece razonable aunque falten datos, márcalo como válido.
+- Devuelve SOLO un JSON válido con esta estructura exacta:
+
+Estructura esperada:
+  {
+    "esValido": true,
+    "errores": []
+  }
+
+Ejemplo:
+Si falta la dirección o el LinkedIn, no lo consideres un error grave.
+Si el correo no tiene formato o la fecha no parece válida, puedes sugerirlo en "errores".
 
 Información a validar:
-${json.encode(_editableInfo)}
+  $sanitizedInfo
 
-Estructura EXACTA de respuesta requerida:
-{
-  "esValido": true,
-  "errores": []
-}
 
-O si hay errores:
-{
-  "esValido": false,
-  "errores": [
-    {
-      "campo": "nombre del campo con error",
-      "problema": "descripción del problema encontrado",
-      "sugerencia": "sugerencia para corregir el problema (opcional)"
-    }
-  ]
-}
-''';
+  ''';
 
-      // Construir el payload para la API
       final payload = {
-        'messages': [
+        "model": "openai/gpt-4.1-mini",
+        "messages": [
           {
-            'role': 'user',
-            'content': prompt,
+            "role": "user",
+            "content": [
+              {"type": "text", "text": prompt}
+            ]
           }
         ],
-        'model': 'meta-llama/llama-4-maverick:free',
-        'max_tokens': 2000,
-        'temperature': 0.1,
+        "max_tokens": 2000,
+        "temperature": 0.1,
       };
 
-      // Realizar la llamada a la API
       final response = await http.post(
         openRouterUrl,
         headers: {
           'Authorization': 'Bearer $openRouterApiKey',
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://cv-generator-app.com',
+          'HTTP-Referer': 'http://localhost:8080',
+          'X-Title': 'ScanCV',
         },
         body: json.encode(payload),
       );
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        final jsonResponse = json.decode(response.body);
-
-        // Extraer el contenido de la respuesta
+        final decodedBody = utf8.decode(response.bodyBytes);
+        final jsonResponse = json.decode(decodedBody);
         final content = jsonResponse['choices'][0]['message']['content'] as String;
-        print("Contenido original LLM: $content");
 
-        try {
-          // Intento #1: Intentar parsear directamente (por si el LLM ya respondió correctamente)
-          try {
-            final validationResult = json.decode(content);
-            print("Parseo directo exitoso: $validationResult");
+        print("🧠 Contenido original del modelo (validación):\n$content");
 
-            // Verificar que tiene la estructura esperada
-            if (validationResult.containsKey('esValido')) {
-              bool esValido = validationResult['esValido'] ?? false;
-              List<dynamic> errores = validationResult['errores'] ?? [];
+        String cleaned = content
+            .replaceAll('```json', '')
+            .replaceAll('```', '')
+            .replaceAll('“', '"')
+            .replaceAll('”', '"')
+            .replaceAll("’", "'")
+            .replaceAll("`", "")
+            .trim();
 
-              // Procesar el resultado
-              if (esValido && errores.isEmpty) {
-                setState(() { _formError = ''; });
-                return true;
-              } else {
-                _mostrarErroresValidacion(errores);
-                return false;
-              }
-            }
-          } catch (e) {
-            print("Parseo directo falló: $e");
-            // Continuar con limpieza
-          }
+        final match = RegExp(r'\{[\s\S]*\}').firstMatch(cleaned);
+        if (match == null) throw Exception("❌ No se encontró un bloque JSON válido en la respuesta del modelo.");
 
-          // Intento #2: Eliminar posibles decoradores markdown y extraer JSON
-          String cleanedContent = content.replaceAll('```json', '').replaceAll('```', '').trim();
-          print("Contenido sin markdown: $cleanedContent");
+        String jsonStr = match.group(0)!;
+        final lastBrace = jsonStr.lastIndexOf('}');
+        if (lastBrace != -1) jsonStr = jsonStr.substring(0, lastBrace + 1);
+        jsonStr = jsonStr.replaceAll(RegExp(r'[^\x00-\x7F]'), '');
 
-          // Utilizar expresión regular para encontrar el objeto JSON
-          RegExp jsonRegex = RegExp(r'(\{.*\})', dotAll: true);
-          var match = jsonRegex.firstMatch(cleanedContent);
+        print("🧹 JSON limpiado (validación):\n$jsonStr");
 
-          if (match != null) {
-            String jsonStr = match.group(1) ?? '';
-            print("JSON extraído con regex: $jsonStr");
+        final result = json.decode(jsonStr);
+        final esValido = result['esValido'] == true;
+        final errores = List<String>.from(result['errores'] ?? []);
 
-            try {
-              final validationResult = json.decode(jsonStr);
-
-              if (validationResult.containsKey('esValido')) {
-                bool esValido = validationResult['esValido'] ?? false;
-                List<dynamic> errores = validationResult['errores'] ?? [];
-
-                // Procesar el resultado
-                if (esValido && errores.isEmpty) {
-                  setState(() { _formError = ''; });
-                  return true;
-                } else {
-                  _mostrarErroresValidacion(errores);
-                  return false;
-                }
-              } else {
-                throw Exception("Estructura JSON incorrecta, falta campo 'esValido'");
-              }
-            } catch (e) {
-              print("Parseo del JSON extraído falló: $e");
-              // Continuar con solución de emergencia
-            }
-          }
-
-          // Solución de emergencia: Crear un objeto de validación que permita continuar
-          print("Usando solución de emergencia: asumir que es válido");
-          setState(() {
-            _formError = 'La IA no pudo validar el formato, pero se procederá a guardar.';
-          });
-
-          // Permitir guardar aunque haya habido un problema con la validación
-          return true;
-
-        } catch (e) {
-          print("Error general en procesamiento: $e");
-          setState(() {
-            _formError = 'Error al analizar la respuesta. La IA no generó un formato válido.';
-          });
-
-          // Preguntar al usuario si desea guardar de todos modos
-          if (context.mounted) {
-            bool? guardarDeTodosModos = await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: Text('Error de validación'),
-                content: Text('No se pudo validar la información con la IA. ¿Deseas guardar de todos modos?'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: Text('Cancelar'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: Text('Guardar sin validar'),
-                  ),
-                ],
-              ),
-            );
-
-            return guardarDeTodosModos ?? false;
-          }
-
-          return false;
-        }
+      if (!esValido) {
+        _mostrarErroresValidacion(errores);
+        return false;
       } else {
-        print("Error HTTP: ${response.statusCode}, ${response.body}");
-        throw Exception('Error en la API de OpenRouter: ${response.statusCode} ${response.body}');
+        if (errores.isNotEmpty) {
+          // Solo mostrar advertencias sin bloquear
+          _mostrarErroresValidacion(errores);
+        } else {
+          setState(() => _formError = '');
+        }
+        return true;
+      }
+
+              
+      } else {
+        print('❌ Error HTTP: ${response.statusCode}, ${response.body}');
+        throw Exception('Error en la API');
       }
     } catch (e) {
-      print("Error general en _validateInfoWithAI: $e");
+      print('❌ Error general en validación: $e');
       setState(() {
         _formError = 'Error al validar información: $e';
       });
-
-      // Preguntar si desea guardar de todos modos
-      if (context.mounted) {
-        bool? guardarDeTodosModos = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text('Error de validación'),
-            content: Text('Ocurrió un error durante la validación. ¿Deseas guardar de todos modos?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text('Cancelar'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text('Guardar sin validar'),
-              ),
-            ],
-          ),
-        );
-
-        return guardarDeTodosModos ?? false;
-      }
-
       return false;
     }
   }
 
-  // Método para mostrar errores de validación de forma legible
   void _mostrarErroresValidacion(List<dynamic> errores) {
     if (errores.isEmpty) return;
 
@@ -1292,12 +1235,13 @@ O si hay errores:
     }
 
     // Lista de campos a mostrar y sus etiquetas
+    // Lista completa de campos a mostrar y sus etiquetas
     final fieldLabels = {
       'nombres': 'Nombres',
       'apellidos': 'Apellidos',
-      'correo': 'Correo electrónico',
-      'telefono': 'Teléfono',
       'direccion': 'Dirección',
+      'telefono': 'Teléfono',
+      'correo': 'Correo electrónico',
       'nacionalidad': 'Nacionalidad',
       'fecha_nacimiento': 'Fecha de nacimiento',
       'estado_civil': 'Estado civil',
@@ -1311,7 +1255,19 @@ O si hay errores:
       'habilidades': 'Habilidades',
       'idiomas': 'Idiomas',
       'certificaciones': 'Certificaciones',
+      'proyectos': 'Proyectos',
+      'publicaciones': 'Publicaciones',
+      'premios': 'Premios',
+      'voluntariados': 'Voluntariados',
+      'referencias': 'Referencias',
+      'expectativas_laborales': 'Expectativas laborales',
+      'experiencia_internacional': 'Experiencia internacional',
+      'permisos_documentacion': 'Permisos y documentación',
+      'vehiculo_licencias': 'Vehículo y licencias',
+      'contacto_emergencia': 'Contacto de emergencia',
+      'disponibilidad_entrevistas': 'Disponibilidad para entrevistas',
     };
+
 
     return Column(
       children: [
@@ -1363,6 +1319,59 @@ O si hay errores:
                     ],
                   ),
                 ),
+
+                // --- Campo especial para subir fotografía ---
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Fotografía',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Center(
+                        child: Column(
+                          children: [
+                            if ((safeInfo['fotografia'] ?? '').isNotEmpty)
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(100),
+                                child: Image.network(
+                                  safeInfo['fotografia'],
+                                  height: 120,
+                                  width: 120,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            else
+                              CircleAvatar(
+                                radius: 60,
+                                backgroundColor: Colors.grey[300],
+                                child: Icon(Icons.person, size: 60, color: Colors.white),
+                              ),
+                            const SizedBox(height: 10),
+                            ElevatedButton.icon(
+                              onPressed: _isFormLoading ? null : _uploadPhotoToSupabase,
+                              icon: const Icon(Icons.upload),
+                              label: const Text('Subir fotografía'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primaryColor,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+
               ...fieldLabels.entries.map((entry) {
                 final fieldName = entry.key;
                 final fieldLabel = entry.value;
@@ -1490,6 +1499,58 @@ O si hay errores:
     );
   }
 
+  Future<void> _uploadPhotoToSupabase() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+      if (image == null) return;
+
+      setState(() {
+        _isFormLoading = true;
+        _formError = 'Subiendo fotografía...';
+      });
+
+      final bytes = await image.readAsBytes();
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+
+      // 📦 Subir la foto a Supabase Storage
+      final path = await supabase.storage
+          .from('fotografias_cv')
+          .uploadBinary(
+            fileName,
+            bytes,
+            fileOptions: const FileOptions(contentType: 'image/jpeg'),
+          );
+
+      // 🌐 Obtener la URL pública
+      final publicUrl = supabase.storage
+          .from('fotografias_cv')
+          .getPublicUrl(fileName);
+
+      // 🧩 Actualizar el campo 'fotografia' en el formulario
+      setState(() {
+        _editableInfo['fotografia'] = publicUrl;
+        _isFormLoading = false;
+        _formError = '';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Fotografía subida correctamente'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print("❌ Error al subir fotografía: $e");
+      setState(() {
+        _isFormLoading = false;
+        _formError = 'Error al subir fotografía: $e';
+      });
+    }
+  }
+
+
   Future<void> _saveEditedInfo() async {
     setState(() {
       _isFormLoading = true;
@@ -1497,21 +1558,17 @@ O si hay errores:
     });
 
     try {
-      if (_recordId.isEmpty) {
-        throw Exception('No se encontró el ID del registro');
-      }
-
       print("DEPURANDO: _editableInfo antes de validar: $_editableInfo");
 
-      // Crear una copia antes de modificarla para la UI
+      // Crear una copia antes de modificarla para guardar
       Map<String, dynamic> editableInfoParaGuardar = Map.from(_editableInfo);
 
-      // Asegurar que _editableInfo es un mapa seguro para la UI
+      // Asegurar tipos válidos (String, etc.)
       _asegurarTiposDeDatos();
 
       print("DEPURANDO: _editableInfo después de asegurar para UI: $_editableInfo");
 
-      // Primero validar la información con el LLM
+      // Validar con IA antes de guardar
       setState(() {
         _formError = 'Validando información...';
       });
@@ -1519,67 +1576,74 @@ O si hay errores:
       final bool isValid = await _validateInfoWithAI();
 
       if (!isValid) {
-        // Si la validación falló, detener el proceso de guardado
         setState(() {
           _isFormLoading = false;
         });
         return;
       }
 
-      // Preparar la información normalizada manteniendo la estructura original
+      // Normalizar los valores antes de guardar
       Map<String, dynamic> infoParaGuardar = {};
       editableInfoParaGuardar.forEach((key, value) {
         if (value is String) {
-          // Normalizar cada valor de texto
           infoParaGuardar[key] = _normalizarTexto(value);
         } else {
-          // Conservar otros tipos de datos (esto es importante para mantener la estructura)
           infoParaGuardar[key] = value;
         }
       });
 
-      print("DEPURANDO: infoParaGuardar para guardar: $infoParaGuardar");
-
-      // Asegurar que el JSON a guardar tenga todos los campos requeridos
-      // Esta lista debe coincidir con la estructura esperada en la base de datos
+      // ✅ Asegurar que todos los campos requeridos existen
       final camposRequeridos = [
-        'nombres', 'apellidos', 'fotografia', 'direccion', 'telefono', 'correo',
+        'nombres', 'apellidos', 'direccion', 'telefono', 'correo',
         'nacionalidad', 'fecha_nacimiento', 'estado_civil', 'linkedin', 'github',
         'portafolio', 'perfil_profesional', 'objetivos_profesionales',
         'experiencia_laboral', 'educacion', 'habilidades', 'idiomas',
         'certificaciones', 'proyectos', 'publicaciones', 'premios',
         'voluntariados', 'referencias', 'expectativas_laborales',
         'experiencia_internacional', 'permisos_documentacion',
-        'vehiculo_licencias', 'contacto_emergencia', 'disponibilidad_entrevistas'
+        'vehiculo_licencias', 'contacto_emergencia', 'disponibilidad_entrevistas',
+        'fotografia'
       ];
 
-      // Asegurar que todos los campos requeridos existen
       for (var campo in camposRequeridos) {
         if (!infoParaGuardar.containsKey(campo)) {
           infoParaGuardar[campo] = "";
         }
       }
 
-      // Actualizar el registro en la base de datos
+      print("DEPURANDO: infoParaGuardar para guardar: $infoParaGuardar");
+
+      // 🗄️ Guardar en la tabla `perfil_information`
+      try {
+        final response = await supabase.from('perfil_information').insert({
+          ...infoParaGuardar,
+          'ultima_accion': 'Actualización desde app CV Scanner',
+          'detalle_accion': 'El usuario editó y guardó su información procesada.',
+          'fecha_actualizacion': DateTime.now().toIso8601String(),
+        });
+
+        print("DEPURANDO: Inserción en perfil_information completada ✅: $response");
+
+      } catch (dbError) {
+        print("❌ Error al insertar en perfil_information: $dbError");
+        throw dbError;
+      }
+
+      // (Opcional) Si todavía quieres actualizar el registro de audio_transcrito:
       try {
         await supabase
             .from('audio_transcrito')
-            .update({
-          'informacion_organizada_usuario': infoParaGuardar,
-        })
+            .update({'informacion_organizada_usuario': infoParaGuardar})
             .eq('id', _recordId);
-
-        print("DEPURANDO: Actualización en base de datos completada");
+        print("DEPURANDO: Actualización en audio_transcrito completada ✅");
       } catch (dbError) {
-        print("DEPURANDO: Error en la base de datos: $dbError");
-        throw dbError;
+        print("⚠️ No se pudo actualizar audio_transcrito (opcional): $dbError");
       }
 
       setState(() {
         _isFormLoading = false;
       });
 
-      // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Información guardada correctamente'),
@@ -1587,10 +1651,10 @@ O si hay errores:
         ),
       );
 
-      // Regresar a la pantalla principal
       Navigator.of(context).pop();
+
     } catch (e) {
-      print("DEPURANDO: Error general en _saveEditedInfo: $e");
+      print("❌ DEPURANDO: Error general en _saveEditedInfo: $e");
       setState(() {
         _isFormLoading = false;
         _formError = 'Error al guardar: $e';

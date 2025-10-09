@@ -7,7 +7,7 @@
 **/
 
 import 'package:flutter/material.dart';
-import 'EditProfileScreen.dart';
+import 'editProfileScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileScreen extends StatefulWidget {

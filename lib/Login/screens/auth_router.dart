@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:scanner_personal/Login/screens/splash_screen.dart';
+import 'splash_screen.dart';
 
 class AuthRouter extends StatefulWidget {
   const AuthRouter({super.key});
@@ -46,14 +46,14 @@ class _AuthRouterState extends State<AuthRouter> {
         });
       } else {
         Future.microtask(() {
-          Navigator.pushReplacementNamed(context, '/login');
+          Navigator.pushReplacementNamed(context, '/home');
         });
       }
     } catch (e, s) {
       debugPrint('❌ Error en AuthRouter: $e');
       debugPrint('$s');
       Future.microtask(() {
-        Navigator.pushReplacementNamed(context, '/login');
+        Navigator.pushReplacementNamed(context, '/home');
       });
     }
   }
