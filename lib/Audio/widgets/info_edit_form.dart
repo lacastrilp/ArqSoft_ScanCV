@@ -197,7 +197,7 @@ class _InfoEditFormState extends State<InfoEditForm> {
 
   Future<bool> _validateInfoWithAI() async {
     try {
-      final openRouterApiKey = 'sk-or-v1-4786de42076f4ea466fc9dca4886a532738103229732b06134754ef974eba04_1';
+      final openRouterApiKey = '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';
       final openRouterUrl = Uri.parse('https://openrouter.ai/api/v1/chat/completions');
 
       final sanitizedInfo = json.encode(_editableInfo).replaceAll(RegExp(r'[^\x00-\x7F]'), '');

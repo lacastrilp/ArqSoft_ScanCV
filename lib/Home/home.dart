@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:scanner_personal/Formulario/cv_form.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:scanner_personal/Configuracion/mainConfig.dart';
 import '../Audio/screens/cv_generator.dart';
