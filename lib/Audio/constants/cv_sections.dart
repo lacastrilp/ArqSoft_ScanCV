@@ -1,4 +1,4 @@
-import '../domain/models/cv_section_model.dart';
+import '../models/cv_section_model.dart';
 
 final List<CVSection> cvSections = [
   CVSection(

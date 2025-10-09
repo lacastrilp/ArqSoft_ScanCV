@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../domain/models/cv_section_model.dart';
+import '../models/cv_section_model.dart';
 
 class CVSectionCard extends StatefulWidget {
   final CVSection section;

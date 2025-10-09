@@ -8,8 +8,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:scanner_personal/Formulario/cv_form.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:scanner_personal/Configuracion/mainConfig.dart';
-import '../Audio/screens/AudioRecorderScreen.dart';
 import '../Audio/screens/cv_generator.dart';
+import '../Formulario/cv_form_unified.dart';
+
 
 final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -274,7 +275,7 @@ class HomeScreen extends StatelessWidget {
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const CVFormEditor()),
+                                MaterialPageRoute(builder: (_) => const CVFormUnified(isEditing: false)),
                               );
                             },
                           ),

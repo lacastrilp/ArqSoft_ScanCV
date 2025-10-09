@@ -1,12 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import '../../Formulario/cv_form_unified.dart';
 import '../constants/cv_sections.dart';
-import '../domain/models/cv_section_model.dart';
+import '../models/cv_section_model.dart';
 import '../presentation/cv_section_card.dart';
 import '../widgets/info_edit_form.dart';
-
 import '../services/audio_manager.dart';
 import '../services/storage_service.dart';
 import '../services/cv_processing_service.dart';
@@ -304,21 +303,27 @@ class _CVGeneratorState extends State<CVGenerator> {
                     Text(_processingStatus, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
                   ],
                 )
-              else if (_isComplete)
-                Expanded(
-                  child: InfoEditForm(
-                    initialInfo: _editableInfo,
-                    recordId: _recordId,
+                else if (_isComplete)
+                  Expanded(
+                    child: CVFormUnified(
+                      initialData: _editableInfo,
+                      recordId: _recordId,
+                      isEditing: true,
+                    ),
+                  )
+                else // Error state
+                  Column(
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.red, size: 60.0),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Error: $_processingStatus',
+                        style: const TextStyle(fontSize: 16, color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
-                )
-              else // Error state
-                Column(
-                  children: [
-                    const Icon(Icons.error_outline, color: Colors.red, size: 60.0),
-                    const SizedBox(height: 20),
-                    Text('Error: $_processingStatus', style: const TextStyle(fontSize: 16, color: Colors.red), textAlign: TextAlign.center),
-                  ],
-                ),
+
             ],
           ),
         ),

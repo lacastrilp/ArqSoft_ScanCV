@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
+import '../Formulario/cv_form_unified.dart';
 
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
@@ -253,149 +254,31 @@ class AccountScreen extends StatelessWidget {
 }
 
 // 1.1 Pantalla de edición de perfil
-class EditProfileScreen extends StatefulWidget {
-  @override
-  _EditProfileScreenState createState() => _EditProfileScreenState();
-}
-
-class _EditProfileScreenState extends State<EditProfileScreen> {
-  final nameController = TextEditingController();
-  final lastNameController = TextEditingController();
-  File? _image;
-  String nombre = '';
-  String apellido = '';
-  String correo = '';
-
-  @override
-  void initState() {
-    super.initState();
-    loadUserProfile();
-    nameController.text = "Nombre";
-    lastNameController.text = "Apellido";
-  }
-  // Función para actualizar el perfil
-  Future<void> loadUserProfile() async {
-    final service = UserProfileService();
-    //final profile = await service.getUserProfile();
-    final profile = await service.getUserProfileById('8ed84979-37f3-4bde-9bd7-487b4e33e215');
-    if (profile != null) {
-      setState(() {
-        nameController.text = profile['nombre_usuario'] ?? '';
-        lastNameController.text = profile['apellido_usuario'] ?? '';
-      });
-    }
-
-  }
-  Future<void> guardarCambios() async {
-    final supabase = Supabase.instance.client;
-    final userId = '8ed84979-37f3-4bde-9bd7-487b4e33e215';
-
-    final response = await supabase
-        .from('usuarios')
-        .update({
-      'nombre_usuario': nameController.text.trim(),
-      'apellido_usuario': lastNameController.text.trim(),
-    })
-        .eq('id', userId)
-        .select();
-
-    if (response.isEmpty) {
-      print('Error al actualizar perfil.');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al actualizar perfil')),
-      );
-    } else {
-      print('Perfil actualizado correctamente.');
-
-      // Mostrar el nombre actualizado y la foto en la Snackbar
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundImage: _image != null
-                    ? FileImage(_image!)
-                    : AssetImage("assets/default_avatar.png") as ImageProvider,
-              ),
-              SizedBox(width: 12),
-              Text('Perfil actualizado: ${nameController.text.trim()}'),
-            ],
-          ),
-          duration: Duration(seconds: 3),
-        ),
-      );
-
-      setState(() {}); // Refrescar la pantalla si quieres mostrar el cambio
-    }
-  }
-
-  Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-
-    if (image != null) {
-      setState(() {
-        _image = File(image.path);
-      });
-    }
-  }
-  void _removeImage() {
-    setState(() {
-      _image = null;
-    });
-  }
+class EditProfileScreen extends StatelessWidget {
+  const EditProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Datos iniciales simulados (puedes obtenerlos de Supabase)
+    final initialData = {
+      "Nombres": "Nombre",
+      "Apellidos": "Apellido",
+      "Correo electrónico": "usuario@correo.com",
+    };
+
+    final recordId = '8ed84979-37f3-4bde-9bd7-487b4e33e215'; // ID real de usuario
+
     return Scaffold(
-      appBar: AppBar(title: Text("Editar Perfil")),
-      body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            GestureDetector(
-              onTap: _pickImage,
-              child: CircleAvatar(
-                radius: 50,
-                backgroundImage: _image != null
-                    ? FileImage(_image!)
-                    : AssetImage("assets/default_avatar.png") as ImageProvider,
-                child: Align(
-                  alignment: Alignment.bottomRight,
-                  child: Icon(Icons.camera_alt, color: const Color.fromARGB(255, 103, 35, 118)),
-                ),
-              ),
-            ),
-            // Botón para eliminar la imagen
-            if (_image != null)
-              TextButton(
-                onPressed: _removeImage,
-                child: Text("Eliminar foto", style: TextStyle(color: Colors.red)),
-              ),
-            SizedBox(height: 20),
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(labelText: "Nombre"),
-            ),
-            SizedBox(height: 10),
-            TextField(
-              controller: lastNameController,
-              decoration: InputDecoration(labelText: "Apellido"),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: guardarCambios,
-              child: Text('Guardar Cambios'),
-            ),
-          ],
-        ),
+      appBar: AppBar(title: const Text('Editar Perfil')),
+      body: CVFormUnified(
+        initialData: initialData,
+        recordId: recordId,
+        isEditing: true, // Modo edición
       ),
     );
   }
 }
-//Supabase
+
 class UserProfileService {
   final supabase = Supabase.instance.client;
 

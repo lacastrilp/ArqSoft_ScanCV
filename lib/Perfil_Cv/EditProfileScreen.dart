@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:scanner_personal/WidgetBarra.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../Formulario/cv_form_unified.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final String userId;
@@ -106,58 +107,14 @@ class _EditProfileScreenState extends State<EditProfileScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xffffffff),
+      backgroundColor: const Color(0xffffffff),
       appBar: const CustomAppBar(title: 'Editar Información'),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Color(0xff9ee4b8),
-        icon: Icon(Icons.save, color: Color(0xFF090467)),
-        label: Text(
-          'Guardar',
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF090467),
-          ),
-        ),
-        onPressed: _saveChanges,
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: fieldMapping.keys.map((label) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: TextFormField(
-                  controller: _controllers[label],
-                  style: GoogleFonts.poppins(fontSize: 14),          // Poppins para el texto
-                  decoration: InputDecoration(
-                    labelText: label,
-                    labelStyle: GoogleFonts.poppins(
-                      fontSize: 16, color: Color(0xFF090467),        // Poppins y azul para labels
-                    ),
-                    filled: true,
-                    fillColor: Color(0xffeff8ff),                     // mismo gris de fondo de pantalla
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),        // esquinas suaves
-                      borderSide: BorderSide(color: Color(0xFF090467)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Color(0xFF090467), width: 1),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Color(0xff9ee4b8), width: 2),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
+      body: CVFormUnified(
+        initialData: widget.userData,
+        recordId: widget.userId,
+        isEditing: true,
       ),
     );
   }
+
 }

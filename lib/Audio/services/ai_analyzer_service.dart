@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AIAnalyzerService {
-  final String _apiKey = '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'; // Consider moving to a secure config
+  final String _apiKey = 'sk-or-v1-4786de42076f4ea466fc9dca4886a532738103229732b06134754ef974eba04_1'; // Consider moving to a secure config
   final Uri _openRouterUrl = Uri.parse('https://openrouter.ai/api/v1/chat/completions');
 
   Future<Map<String, dynamic>> analyzeTranscription(String transcription) async {
