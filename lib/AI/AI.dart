@@ -5,7 +5,7 @@ Future<void> generarCVGratis(String datosUsuario) async {
   final response = await http.post(
     Uri.parse("https://openrouter.ai/api/v1/chat/completions"),
     headers: {
-      "Authorization": "Bearer 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",
+      "Authorization": "Bearer sk-or-v1-",
       "Content-Type": "application/json",
     },
     body: jsonEncode({
