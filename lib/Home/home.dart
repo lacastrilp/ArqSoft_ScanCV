@@ -8,9 +8,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:scanner_personal/Formulario/cv_form.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:scanner_personal/Configuracion/mainConfig.dart';
-
-
-
 import '../Audio/screens/AudioRecorderScreen.dart';
 import '../Audio/screens/cv_generator.dart';
 
