@@ -1,9 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../Audio/utils/helpers.dart';
 import '../WidgetBarra.dart';
 import '../supabase_singleton.dart';
 import '../perfil_repository.dart';

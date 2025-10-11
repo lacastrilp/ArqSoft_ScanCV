@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'home.dart';
-import 'home.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Cambie esto
