@@ -1,16 +1,18 @@
-# scanner_personal
+## Compilar:
+1. Descargar flutter https://docs.flutter.dev/tools/sdk
+2. Clonar el repositorio 
 
-A new Flutter project.
+3. Cambiar: 
+- sk-or-v1-69a1d008acb699669930b119f813db4c95e2ed02bf4a3b05766886e536258a6_5
+- Por:
+- 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
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+4. Ejecutar los comandos:
+- flutter clean
+- flutter pub get
+- flutter build web --base-href=/ --target=C:\Users\nameUser\folder1\folder2\Scanner_CV-main\lib\main.dart 
+- cd build/web
+- python -m http.server 8080
+  
+### Nota:
+- Cambiar la ruta C:\Users\nameUser\folder1\folder2\ por la ruta tuya
