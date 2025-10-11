@@ -16,52 +16,69 @@ class CVProcessingService {
   final AIAnalyzerService _aiAnalyzerService;
   final CVDataService _cvDataService;
 
-  CVProcessingService(this._storageService, this._transcriptionService, this._aiAnalyzerService, this._cvDataService);
+  final StreamController<String> _statusController =
+      StreamController<String>.broadcast();
+  Stream<String> get statusStream => _statusController.stream;
 
-  StreamController<String> _processingStatusController = StreamController<String>.broadcast();
-  Stream<String> get processingStatusStream => _processingStatusController.stream;
+  CVProcessingService(
+    this._storageService,
+    this._transcriptionService,
+    this._aiAnalyzerService,
+    this._cvDataService,
+  );
 
-  Future<Map<String, dynamic>> processAudios(Map<String, String> audioUrls) async {
-    if (audioUrls.isEmpty) {
+  Future<Map<String, dynamic>> processAudios(
+    Map<String, String> audioUrls,
+  ) async {
+    if (audioUrls.isEmpty)
       throw Exception("No se encontraron grabaciones de audio para procesar.");
-    }
 
     final cvId = DateTime.now().millisecondsSinceEpoch.toString();
     Map<String, String> transcriptions = {};
     Map<String, String> processedAudioUrls = {};
+
     int totalSections = audioUrls.length;
     int processedSections = 0;
 
     try {
       for (var section in cvSections) {
-        if (audioUrls.containsKey(section.id)) {
-          final audioPath = audioUrls[section.id]!;
-          processedSections++;
+        if (!audioUrls.containsKey(section.id)) continue;
 
-          _updateStatus('Procesando audio ${processedSections}/$totalSections: ${section.title}');
+        final audioPath = audioUrls[section.id]!;
+        processedSections++;
+        _updateStatus(
+          "🎧 Procesando ${section.title} ($processedSections/$totalSections)",
+        );
 
-          // 1. Get audio bytes from URL
-          final Uint8List audioBytes = await _getAudioBytes(audioPath);
+        // 1️⃣ Descarga los bytes
+        final Uint8List audioBytes = await _getAudioBytes(audioPath);
 
-          // 2. Upload bytes to get a stable URL for transcription
-          _updateStatus('Subiendo a Supabase (${processedSections}/$totalSections)...');
-          final publicUrl = await _storageService.uploadAudioBytes(audioBytes, cvId, section.id);
-          processedAudioUrls[section.title] = publicUrl;
+        // 2️⃣ Sube los bytes a Supabase
+        _updateStatus("☁️ Subiendo ${section.title}...");
+        final publicUrl = await _storageService.uploadAudioBytes(
+          audioBytes,
+          cvId,
+          section.id,
+        );
+        processedAudioUrls[section.title] = publicUrl;
 
-          // 3. Transcribe audio
-          _updateStatus('Transcribiendo (${processedSections}/$totalSections): ${section.title}');
-          final transcription = await _transcriptionService.transcribeAudio(publicUrl);
-          transcriptions[section.title] = transcription;
-        }
+        // 3️⃣ Transcribe
+        _updateStatus("✍️ Transcribiendo ${section.title}...");
+        final transcription = await _transcriptionService.transcribeAudio(
+          publicUrl,
+        );
+        transcriptions[section.title] = transcription;
       }
 
-      // 4. Combine and analyze transcriptions
-      _updateStatus('Analizando transcripción con IA...');
-      final combinedTranscription = _combineTranscriptions(transcriptions);
-      final analyzedData = await _aiAnalyzerService.analyzeTranscription(combinedTranscription);
+      // 4️⃣ Analiza con IA
+      _updateStatus("🤖 Analizando transcripciones...");
+      final combinedText = _combineTranscriptions(transcriptions);
+      final analyzedData = await _aiAnalyzerService.analyzeTranscription(
+        combinedText,
+      );
 
-      // 5. Save everything to the database
-      _updateStatus('Guardando información en la base de datos...');
+      // 5️⃣ Guarda en Supabase
+      _updateStatus("💾 Guardando datos...");
       final recordId = await _cvDataService.saveCVData(
         cvId: cvId,
         transcriptions: transcriptions,
@@ -69,16 +86,10 @@ class CVProcessingService {
         analyzedData: analyzedData,
       );
 
-      _updateStatus('¡Proceso completado!');
-
-      return {
-        'recordId': recordId,
-        'analyzedData': analyzedData,
-      };
-
+      _updateStatus("✅ Proceso completado.");
+      return {'recordId': recordId, 'analyzedData': analyzedData};
     } catch (e) {
-      _updateStatus('Error: $e');
-      print("Error en el procesamiento de CV: $e");
+      _updateStatus("❌ Error durante el procesamiento: $e");
       rethrow;
     }
   }
@@ -99,44 +110,38 @@ class CVProcessingService {
           });
           reader.readAsArrayBuffer(blob);
         } else {
-          completer.completeError('Error al obtener el audio: código ${xhr.status}');
+          completer.completeError(
+            "Error al obtener audio: código ${xhr.status}",
+          );
         }
       });
 
-      xhr.onError.listen((_) {
-        completer.completeError('Error de red al obtener el audio');
-      });
-
+      xhr.onError.listen((_) => completer.completeError("Error de red"));
       xhr.send();
       return completer.future;
     } else {
       final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        return response.bodyBytes;
-      } else {
-        throw Exception('Failed to download audio file: ${response.statusCode}');
-      }
+      if (response.statusCode == 200) return response.bodyBytes;
+      throw Exception("Error HTTP ${response.statusCode}");
     }
   }
 
   String _combineTranscriptions(Map<String, String> transcriptions) {
-    StringBuffer combined = StringBuffer();
+    final buffer = StringBuffer();
     for (var section in cvSections) {
       if (transcriptions.containsKey(section.title)) {
-        combined.writeln("### section.title.toUpperCase() ###");
-        combined.writeln(transcriptions[section.title]);
-        combined.writeln("\n");
+        buffer.writeln("### ${section.title.toUpperCase()} ###");
+        buffer.writeln(transcriptions[section.title]);
+        buffer.writeln();
       }
     }
-    return combined.toString();
+    return buffer.toString();
   }
 
-  void _updateStatus(String status) {
-    _processingStatusController.add(status);
-    print(status);
+  void _updateStatus(String message) {
+    _statusController.add(message);
+    debugPrint(message);
   }
 
-  void dispose() {
-    _processingStatusController.close();
-  }
+  void dispose() => _statusController.close();
 }

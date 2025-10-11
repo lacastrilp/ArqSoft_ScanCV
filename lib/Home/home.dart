@@ -9,7 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:scanner_personal/setting/mainConfig.dart';
 import '../audio/screens/cv_generator.dart';
 import '../form/cv_form_unified.dart';
-
+import '../supabase_singleton.dart';
 
 final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -209,7 +209,7 @@ class HomeScreen extends StatelessWidget {
 
                               if (foto != null) {
                                 final bytes = await foto.readAsBytes();
-                                final supabase = Supabase.instance.client;
+                                final supabase = SupabaseManager.instance.client;
                                 final nombreArchivo = 'foto_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
                                 await supabase.storage.from('cv').uploadBinary('archivos/$nombreArchivo', bytes);
@@ -250,7 +250,7 @@ class HomeScreen extends StatelessWidget {
                                 }
 
                                 if (archivoBytes != null) {
-                                  final supabase = Supabase.instance.client;
+                                  final supabase = SupabaseManager.instance.client;
                                   final nombreArchivo = archivo.name;
 
                                   await supabase.storage.from('cv').uploadBinary('archivos/$nombreArchivo', archivoBytes);

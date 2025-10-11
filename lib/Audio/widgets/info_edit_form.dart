@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../perfil_repository.dart';
 import '../utils/helpers.dart';
+import '../../supabase_singleton.dart';
 
-final supabase = Supabase.instance.client;
+
+final supabase = SupabaseManager.instance.client;
 
 class InfoEditForm extends StatefulWidget {
   final Map<String, dynamic> initialInfo;
@@ -104,100 +107,90 @@ class _InfoEditFormState extends State<InfoEditForm> {
     }
   }
 
-  Future<void> _saveEditedInfo() async {
+
+
+final _perfilRepo = PerfilRepository();
+
+Future<void> _saveEditedInfo() async {
+  setState(() {
+    _isFormLoading = true;
+    _formError = '';
+  });
+
+  try {
+    Map<String, dynamic> editableInfoParaGuardar = Map.from(_editableInfo);
+    _asegurarTiposDeDatos();
+
     setState(() {
-      _isFormLoading = true;
-      _formError = '';
+      _formError = 'Validando información...';
     });
 
-    try {
-      Map<String, dynamic> editableInfoParaGuardar = Map.from(_editableInfo);
-      _asegurarTiposDeDatos();
-
-      setState(() {
-        _formError = 'Validando información...';
-      });
-
-      final bool isValid = await _validateInfoWithAI();
-
-      if (!isValid) {
-        setState(() {
-          _isFormLoading = false;
-        });
-        return;
-      }
-
-      Map<String, dynamic> infoParaGuardar = {};
-      editableInfoParaGuardar.forEach((key, value) {
-        if (value is String) {
-          infoParaGuardar[key] = normalizarTexto(value);
-        } else {
-          infoParaGuardar[key] = value;
-        }
-      });
-
-      final camposRequeridos = [
-        'nombres', 'apellidos', 'direccion', 'telefono', 'correo',
-        'nacionalidad', 'fecha_nacimiento', 'estado_civil', 'linkedin', 'github',
-        'portafolio', 'perfil_profesional', 'objetivos_profesionales',
-        'experiencia_laboral', 'educacion', 'habilidades', 'idiomas',
-        'certificaciones', 'proyectos', 'publicaciones', 'premios',
-        'voluntariados', 'referencias', 'expectativas_laborales',
-        'experiencia_internacional', 'permisos_documentacion',
-        'vehiculo_licencias', 'contacto_emergencia', 'disponibilidad_entrevistas',
-        'fotografia'
-      ];
-
-      for (var campo in camposRequeridos) {
-        if (!infoParaGuardar.containsKey(campo)) {
-          infoParaGuardar[campo] = "";
-        }
-      }
-
-      await supabase.from('perfil_information').insert({
-        ...infoParaGuardar,
-        'ultima_accion': 'Actualización desde app CV Scanner',
-        'detalle_accion': 'El usuario editó y guardó su información procesada.',
-        'fecha_actualizacion': DateTime.now().toIso8601String(),
-      });
-
-      await supabase
-          .from('audio_transcrito')
-          .update({'informacion_organizada_usuario': infoParaGuardar})
-          .eq('id', widget.recordId);
-
-      setState(() {
-        _isFormLoading = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Información guardada correctamente'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      Navigator.of(context).pop();
-
-    } catch (e) {
-      print("❌ DEPURANDO: Error general en _saveEditedInfo: $e");
-      setState(() {
-        _isFormLoading = false;
-        _formError = 'Error al guardar: $e';
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al guardar: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    final bool isValid = await _validateInfoWithAI();
+    if (!isValid) {
+      setState(() => _isFormLoading = false);
+      return;
     }
+
+    Map<String, dynamic> infoParaGuardar = {};
+    editableInfoParaGuardar.forEach((key, value) {
+      infoParaGuardar[key] = value is String ? normalizarTexto(value) : value;
+    });
+
+    final camposRequeridos = [
+      'nombres', 'apellidos', 'direccion', 'telefono', 'correo',
+      'nacionalidad', 'fecha_nacimiento', 'estado_civil', 'linkedin', 'github',
+      'portafolio', 'perfil_profesional', 'objetivos_profesionales',
+      'experiencia_laboral', 'educacion', 'habilidades', 'idiomas',
+      'certificaciones', 'proyectos', 'publicaciones', 'premios',
+      'voluntariados', 'referencias', 'expectativas_laborales',
+      'experiencia_internacional', 'permisos_documentacion',
+      'vehiculo_licencias', 'contacto_emergencia', 'disponibilidad_entrevistas',
+      'fotografia'
+    ];
+
+    for (var campo in camposRequeridos) {
+      infoParaGuardar[campo] ??= '';
+    }
+
+    // ✅ 1️⃣ Guardar o actualizar perfil según correo
+    final perfilId = await _perfilRepo.insertarOActualizarPerfilPorCorreo(infoParaGuardar);
+    print("✅ Perfil sincronizado correctamente. ID final: $perfilId");
+
+    // ✅ 2️⃣ Guardar también en `audio_transcrito`
+    await _perfilRepo.insertarOActualizarAudioTranscrito(widget.recordId, infoParaGuardar);
+
+
+    setState(() => _isFormLoading = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Información guardada correctamente en ambas tablas ✅'),
+        backgroundColor: Colors.green,
+      ),
+    );
+
+    Navigator.of(context).pop();
+
+  } catch (e) {
+    print("❌ Error general en _saveEditedInfo: $e");
+    setState(() {
+      _isFormLoading = false;
+      _formError = 'Error al guardar: $e';
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error al guardar: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
+}
+
 
   Future<bool> _validateInfoWithAI() async {
     try {
-      final openRouterApiKey = 'sk-or-v1-69a1d008acb699669930b119f813db4c95e2ed02bf4a3b05766886e536258a6_5';
+      final openRouterApiKey = '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';
       final openRouterUrl = Uri.parse('https://openrouter.ai/api/v1/chat/completions');
 
       final sanitizedInfo = json.encode(_editableInfo).replaceAll(RegExp(r'[^\x00-\x7F]'), '');

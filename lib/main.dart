@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'Home/home.dart';
+import 'supabase_singleton.dart';
 
 // 🔧 Supabase configuración
 const supabaseUrl = 'https://utvbtdxeseokumaosali.supabase.co'; // ⚠️ reemplázala con tu real
@@ -10,9 +11,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inicializa Supabase una sola vez
-  await Supabase.initialize(
-    url: supabaseUrl,
-    anonKey: supabaseAnonKey,
+  await SupabaseManager.instance.init(
+    supabaseUrl: supabaseUrl,
+    supabaseAnonKey: supabaseAnonKey,
   );
 
   runApp(const MyApp());

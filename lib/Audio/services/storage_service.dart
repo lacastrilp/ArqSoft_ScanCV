@@ -1,14 +1,17 @@
+// lib/services/storage_service.dart
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '../../supabase_singleton.dart';
 import 'dart:io';
 import 'dart:html' as html;
 
-class StorageService {
-  final SupabaseClient _supabase;
 
-  StorageService(this._supabase);
+class StorageService {
+  final SupabaseClient _supabase = SupabaseManager.instance.client;
+
+  StorageService();
 
   Future<String> uploadAudio(String path, String sectionId) async {
     try {
@@ -33,6 +36,7 @@ class StorageService {
       await _supabase.storage.from('audios').uploadBinary(storagePath, bytes);
       final publicUrl = _supabase.storage.from('audios').getPublicUrl(storagePath);
 
+      print("✅ Audio subido correctamente: $publicUrl");
       return publicUrl;
     } catch (e) {
       print("❌ Error al subir audio a Supabase: $e");
@@ -47,6 +51,8 @@ class StorageService {
           audioBytes,
           fileOptions: const FileOptions(contentType: 'audio/webm'),
         );
-    return _supabase.storage.from('Audios').getPublicUrl(fileName);
+    final publicUrl = _supabase.storage.from('Audios').getPublicUrl(fileName);
+    print("✅ Audio (bytes) subido correctamente: $publicUrl");
+    return publicUrl;
   }
 }

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import '../form/cv_form_unified.dart';
+import '../supabase_singleton.dart';
 
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
@@ -280,7 +281,7 @@ class EditProfileScreen extends StatelessWidget {
 }
 
 class UserProfileService {
-  final supabase = Supabase.instance.client;
+  final supabase = SupabaseManager.instance.client;
 
   Future<Map<String, dynamic>?> getUserProfile() async {
     final user = supabase.auth.currentUser;

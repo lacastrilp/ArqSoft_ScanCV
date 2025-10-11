@@ -5,6 +5,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../Audio/utils/helpers.dart';
 import '../WidgetBarra.dart';
+import '../supabase_singleton.dart';
+import '../perfil_repository.dart';
+
+
 
 class CVFormUnified extends StatefulWidget {
   final Map<String, dynamic>? initialData; // datos iniciales (para edición)
@@ -23,7 +27,7 @@ class CVFormUnified extends StatefulWidget {
 }
 
 class _CVFormUnifiedState extends State<CVFormUnified> {
-  final supabase = Supabase.instance.client;
+  final supabase = SupabaseManager.instance.client;
   bool _isFormLoading = false;
   String _formError = '';
   late Map<String, dynamic> _formData;
@@ -103,45 +107,58 @@ class _CVFormUnifiedState extends State<CVFormUnified> {
     }
   }
 
-  Future<void> _saveForm() async {
-    setState(() {
-      _isFormLoading = true;
-      _formError = '';
-    });
 
-    try {
-      if ((_formData['nombres'] ?? '').isEmpty ||
-          (_formData['apellidos'] ?? '').isEmpty ||
-          (_formData['correo'] ?? '').isEmpty) {
-        throw Exception(
-            'Por favor completa los campos obligatorios: nombres, apellidos y correo.');
-      }
 
-      final updateData = Map<String, dynamic>.from(_formData)
-        ..remove('id');
+final _perfilRepo = PerfilRepository();
 
-      if (widget.isEditing) {
-        await supabase
-            .from('perfil_information')
-            .update(updateData)
-            .eq('id', widget.recordId as Object);
-      } else {
-        await supabase.from('perfil_information').insert(updateData);
-      }
+Future<void> _saveForm() async {
+  setState(() {
+    _isFormLoading = true;
+    _formError = '';
+  });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Información guardada correctamente'),
-          backgroundColor: Colors.green,
-        ),
+  try {
+    // 🧩 Validar campos obligatorios
+    if ((_formData['nombres'] ?? '').isEmpty ||
+        (_formData['apellidos'] ?? '').isEmpty ||
+        (_formData['correo'] ?? '').isEmpty) {
+      throw Exception(
+        'Por favor completa los campos obligatorios: nombres, apellidos y correo.',
       );
-      Navigator.pop(context);
-    } catch (e) {
-      setState(() => _formError = 'Error al guardar: $e');
-    } finally {
-      setState(() => _isFormLoading = false);
     }
+
+    // 🧹 Limpiar y preparar los datos
+    final data = Map<String, dynamic>.from(_formData)..remove('id');
+
+    // ✅ Guardar o actualizar según el correo
+    final perfilId = await _perfilRepo.insertarOActualizarPerfilPorCorreo(data);
+
+    print("✅ Perfil sincronizado correctamente. ID final: $perfilId");
+
+    // 🎉 Mostrar mensaje de éxito
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('✅ Información guardada correctamente (ID: $perfilId)'),
+        backgroundColor: Colors.green,
+      ),
+    );
+
+    // 🔙 Volver a la pantalla anterior
+    Navigator.pop(context);
+  } catch (e) {
+    print("❌ Error al guardar formulario: $e");
+    setState(() => _formError = 'Error al guardar: $e');
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error al guardar: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    setState(() => _isFormLoading = false);
   }
+}
 
   @override
   Widget build(BuildContext context) {

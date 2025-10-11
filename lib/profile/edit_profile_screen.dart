@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:scanner_personal/WidgetBarra.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../form/cv_form_unified.dart';
+import '../supabase_singleton.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final String userId;
@@ -83,7 +84,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       updates[key] = _controllers[label]?.text ?? '';
     });
     try {
-      final supabase = Supabase.instance.client;
+      final supabase = SupabaseManager.instance.client;
       await supabase
           .from('perfil_information')
           .update(updates)
