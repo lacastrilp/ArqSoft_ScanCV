@@ -150,6 +150,9 @@ class _CVGeneratorState extends State<CVGenerator> {
         _isComplete = true;
         _isProcessing = false;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ CV guardado correctamente en Supabase')),
+      );
     } catch (e) {
       setState(() {
         _isProcessing = false;

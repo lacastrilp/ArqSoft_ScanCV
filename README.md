@@ -1,3 +1,12 @@
+**Curso:** Arquitectura de Software  
+**Integrantes:** Alejandro Castrillón, Camila Velez, Alejandro Arteaga
+
+# Documentación del Proyecto
+
+La documentación completa del Taller 1 se encuentra en el siguiente archivo:
+
+[Ver documentación (Taller 1)](./Taller1.pdf)
+
 # Guía para Compilar el Proyecto Flutter
 
 ## Requisitos Previos
@@ -56,3 +65,4 @@ python -m http.server 8080
 Una vez que el servidor esté en ejecución, abre en tu navegador:
 
 [http://localhost:8080](http://localhost:8080)
+

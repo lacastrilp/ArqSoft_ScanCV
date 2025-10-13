@@ -1,13 +1,36 @@
-// lib/services/cv_data_service.dart
+// lib/Audio/services/cv_data_service.dart
 import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/cv_sections.dart';
-import '../../supabase_singleton.dart';
+import '../../setting/supabase_singleton.dart';
+import '../models/cv_model.dart';
+import '../models/cv_section_model.dart';
+import '../models/cv_field_model.dart';
 
+/// 🔹 Nuevo repositorio para separar acceso a datos (Patrón Repository)
+class CVRepository {
+  final SupabaseClient client;
+  CVRepository(this.client);
+
+  Future<Map<String, dynamic>> insertAudioTranscrito(Map<String, dynamic> data) async {
+    final response = await client.from('audio_transcrito').insert(data).select('id');
+    return (response.isNotEmpty) ? response[0] : {};
+  }
+
+  Future<List<Map<String, dynamic>>> getAudioTranscritos() async {
+    final response = await client.from('audio_transcrito').select();
+    return List<Map<String, dynamic>>.from(response);
+  }
+}
+
+/// 🔹 Servicio principal que usa el repositorio
 class CVDataService {
   final SupabaseClient _supabase = SupabaseManager.instance.client;
+  late final CVRepository _repository;
 
-  CVDataService();
+  CVDataService() {
+    _repository = CVRepository(_supabase);
+  }
 
   Future<String> saveCVData({
     required String cvId,
@@ -18,15 +41,18 @@ class CVDataService {
     try {
       final now = DateTime.now();
 
+      // 🔸 Combinamos las transcripciones por sección
       StringBuffer combinedTranscription = StringBuffer();
       for (var section in cvSections) {
         if (transcriptions.containsKey(section.title)) {
-          combinedTranscription.writeln("### <strong><em><span style=\"color: #000000;\"></span></em></strong>${section.title.toUpperCase()} ###");
+          combinedTranscription.writeln(
+              "### <strong><em><span style=\"color: #000000;\"></span></em></strong>${section.title.toUpperCase()} ###");
           combinedTranscription.writeln(transcriptions[section.title]);
           combinedTranscription.writeln("\n");
         }
       }
 
+      // 🔸 Construimos la info detallada de cada sección
       Map<String, dynamic> sectionsInfo = {};
       for (var section in cvSections) {
         if (transcriptions.containsKey(section.title)) {
@@ -51,13 +77,9 @@ class CVDataService {
 
       print("Guardando registro combinado en la base de datos...");
 
-      final response = await _supabase
-          .from('audio_transcrito')
-          .insert(record)
-          .select('id');
-
-      if (response.isNotEmpty) {
-        final recordId = response[0]['id'].toString();
+      final inserted = await _repository.insertAudioTranscrito(record);
+      if (inserted.isNotEmpty) {
+        final recordId = inserted['id'].toString();
         print("✅ Información guardada correctamente. ID del registro: $recordId");
         return recordId;
       } else {
@@ -67,5 +89,10 @@ class CVDataService {
       print("❌ Error al guardar en la base de datos: $e");
       rethrow;
     }
+  }
+
+  /// 🔸 Ejemplo extra: obtener todos los CV guardados
+  Future<List<Map<String, dynamic>>> getAllCVRecords() async {
+    return await _repository.getAudioTranscritos();
   }
 }

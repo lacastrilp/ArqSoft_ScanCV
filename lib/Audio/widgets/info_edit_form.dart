@@ -190,7 +190,7 @@ Future<void> _saveEditedInfo() async {
 
   Future<bool> _validateInfoWithAI() async {
     try {
-      final openRouterApiKey = 'sk-or-v1-69a1d008acb699669930b119f813db4c95e2ed02bf4a3b05766886e536258a6_5';
+      final openRouterApiKey = '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';
       final openRouterUrl = Uri.parse('https://openrouter.ai/api/v1/chat/completions');
 
       final sanitizedInfo = json.encode(_editableInfo).replaceAll(RegExp(r'[^\x00-\x7F]'), '');
